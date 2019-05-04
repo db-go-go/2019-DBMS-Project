@@ -57,6 +57,8 @@ PAllocator::PAllocator() {
         this->freeNum = 0;
         this->startLeaf = NULL;
     }
+    allocatorCatalog.close();
+    freeListFile.close();
     this->initFilePmemAddr();
 }
 
