@@ -42,6 +42,20 @@ PAllocator::PAllocator() {
     } else {
         // not exist, create catalog and free_list file, then open.
         // TODO
+        ofstream allocatorCatalog(allocatorCatalogPath, ios::out|ios::binary);
+        ofstream freeListFile(freeListPath, ios::out|ios::binary);
+        int maxFileId = 1;//all free
+        int freeNum = 0;
+        PPointer startLeaf = NULL;
+        PPointer freepoint = NULL;
+        allocatorCatalog.write((char*)&maxFileId,sizeof(uint64_t));
+        allocatorCatalog.write((char*)&freeNum,sizeof(uint64_t));
+        allocatorCatalog.write((char*)&startLeaf,sizeof(PPointer));
+        freeListFile.write((char*)&freepoint,sizeof(PPointer));
+
+        this->maxFileId = 1;
+        this->freeNum = 0;
+        this->startLeaf = NULL;
     }
     this->initFilePmemAddr();
 }
