@@ -168,37 +168,30 @@ bool PAllocator::freeLeaf(PPointer p) {
         string freeListPath = DATA_DIR + P_ALLOCATOR_FREE_LIST;
         string leafgroupPath = DATA_DIR + to_string(p.fileId);
 
-        uint64_t t_maxFielId = 0;
-        uint64_t t_freeNum = 0;
-        PPointer t_startLeaf = NULL;
-        vector<PPointer> t_freeList;
-        ifstream allocatorCatalog(allocatorCatalogPath, ios::in|ios::binary);
-        ifstream freeListFile(freeListPath, ios::in|ios::binary);
-        if (allocatorCatalog.is_open() && freeListFile.is_open()) {
-            allocatorCatalog.read((char*)&t_maxFileId, sizeof(uint64_t));
-            allocatorCatalog.read((char*)&t_freeNum, sizeof(uint64_t));
-            allocatorCatalog.read((char*)&t_startLeaf, sizeof(PPointer));
-            for(int i = 0; i < t_freeNum; i ++) {
-                PPointer tmp;
-                freeListFile.read((char*)&tmp, sizeof(PPointer));
-                t_freeList.push_back(tmp);
-            }
-            allocatorCatalog.close();
-            freeListFile.close();
-        }
-        t_freeNum ++;
-        uint64_t t_usedNum = 0;
+        uint64_t usedNum;
         string bitmap;
-        ifstream leafgroupFile(leafgroupPath, ios::in|ios::binary);
-        if (leafgroupFile.is_open()) {
-            leafgroupFile.read((char*)&t_usedNum, sizeof(uint64_t));
-            leafgroupFile.read((char*)&bitmap, sizeof(Byte)*LEAF_GROUP_AMOUNT);
-        }
+        fstream leafgroupFile(leafgroupPath, ios::in|ios::app|ios::binary);
+        leafgroupFile.seekg(ios::beg);
+        leafgroupFile.read((char*)&usedNum, sizeof(uint64_t));
+        leafgroupFile.read((char*)&bitmap, sizeof(Byte)*LEAF_GROUP_AMOUNT);
+        int leaf_index = (p.offset-LEAF_GROUP_HEAD)/calLeafSize();
+        usedNum --;
+        bitmap[leaf_index] = '0';
+        leafgroupFile.seekg(ios::beg);
+        leafgroupFile.write((char*)&usedNum, sizeof(uint64_t));
+        leafgroupFile.write((char*)&bitmap, sizeof(Byte)*LEAF_GROUP_AMOUNT);
         
-        
+        ofstream allocatorCatalog(allocatorCatalogPath, ios::app|ios::binary);
+        allocatorCatalog.seekg(8, ios::beg);
+        allocatorCatalog.write((char*)&this->freeNum, sizeof(uint64_t));
+
+        ofstream freeListFile(freeListPath, ios::out|ios::binary);
+        freeListFile.write((char*)&this->freeList, sizeof(PPointer)*this->freeNum);
+
         allocatorCatalog.close();
         freeListFile.close();
         leafgroupFile.close();
+        return true;
     }
     return false;
 }
