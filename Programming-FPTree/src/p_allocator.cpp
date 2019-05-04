@@ -183,5 +183,36 @@ bool PAllocator::persistCatalog() {
 // create a new leafgroup, one file per leafgroup
 bool PAllocator::newLeafGroup() {
     // TODO
+   string leafgroupPath = DATA_DIR + to_string(this->maxFileId);
+    ofstream leafgroupFile(leafgroupPath, ios::out|ios::binary);
+    if(leafgroupFile.is_open()) 
+        int zero = 0;
+        leafgroupFile.write((char*)&zero, sizeof(Byte)*(8+LEAF_GROUP_AMOUNT));
+        /*int len = (LEAF_DEGREE * 2 + 7) / 8;
+        file.seekg(len, ios::beg);*/
+        string allocatorCatalogPath = DATA_DIR + P_ALLOCATOR_CATALOG_NAME;
+        string freeListPath = DATA_DIR + P_ALLOCATOR_FREE_LIST;
+        ofstream allocatorCatalog(allocatorCatalogPath, ios::app|ios::binary);
+        ofstream freeListFile(freeListPath, ios::out|ios::binary);
+        if(!(allocatorCatalog.is_open() && freeListFile.is_open())) {
+            leafgroupFile.close();
+            return false;
+        }
+        this->maxFileId ++;
+        this->freeNum += LEAF_GROUP_AMOUNT;
+        allocatorCatalog.seekg(ios::beg);
+        allocatorCatalog.write((char*)&this->maxFileId, sizeof(uint64_t));
+        allocatorCatalog.write((char*)&this->freeNum, sizeof(uint64_t));
+        uint64_t offset = LEAF_GROUP_HEAD;
+        uint64_t leaf_size = calLeafSize();
+        for(int i = 0; i < LEAF_GROUP_SIZE; i ++) {
+            this->freeList.push_back(PPointer(this->maxFileId-1, offset));
+            offset += leaf_size;
+        }
+        freeListFile.write((char*)&this->freeList, sizeof(PPointer)*this->freeNum);
+        allocatorCatalog.close();
+        freeListFile.close();
+        leafgroupFile.close();
+    }
     return false;
 }
