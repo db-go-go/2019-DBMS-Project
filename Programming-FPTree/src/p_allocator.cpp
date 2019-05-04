@@ -58,12 +58,15 @@ PAllocator::PAllocator() {
         this->maxFileId = 1;
         this->freeNum = 0;
         this->startLeaf = NULL;
+        allocatorCatalog.close();
+        freeListFile.close();
     }
     this->initFilePmemAddr();
 }
 
 PAllocator::~PAllocator() {
     // TODO
+     delete * pAllocator;
 }
 
 const uint64_t LEAF_GROUP_SIZE = LEAF_GROUP_HEAD + LEAF_GROUP_AMOUNT*calLeafSize();
@@ -158,7 +161,44 @@ bool PAllocator::ifLeafExist(PPointer p) {
 bool PAllocator::freeLeaf(PPointer p) {
     // TODO
     if(this->ifLeafUsed(p)) {
+        this->freeList.push_back(p);
+        this->freeNum ++;
+        
+        string allocatorCatalogPath = DATA_DIR + P_ALLOCATOR_CATALOG_NAME;
+        string freeListPath = DATA_DIR + P_ALLOCATOR_FREE_LIST;
+        string leafgroupPath = DATA_DIR + to_string(p.fileId);
 
+        uint64_t t_maxFielId = 0;
+        uint64_t t_freeNum = 0;
+        PPointer t_startLeaf = NULL;
+        vector<PPointer> t_freeList;
+        ifstream allocatorCatalog(allocatorCatalogPath, ios::in|ios::binary);
+        ifstream freeListFile(freeListPath, ios::in|ios::binary);
+        if (allocatorCatalog.is_open() && freeListFile.is_open()) {
+            allocatorCatalog.read((char*)&t_maxFileId, sizeof(uint64_t));
+            allocatorCatalog.read((char*)&t_freeNum, sizeof(uint64_t));
+            allocatorCatalog.read((char*)&t_startLeaf, sizeof(PPointer));
+            for(int i = 0; i < t_freeNum; i ++) {
+                PPointer tmp;
+                freeListFile.read((char*)&tmp, sizeof(PPointer));
+                t_freeList.push_back(tmp);
+            }
+            allocatorCatalog.close();
+            freeListFile.close();
+        }
+        t_freeNum ++;
+        uint64_t t_usedNum = 0;
+        string bitmap;
+        ifstream leafgroupFile(leafgroupPath, ios::in|ios::binary);
+        if (leafgroupFile.is_open()) {
+            leafgroupFile.read((char*)&t_usedNum, sizeof(uint64_t));
+            leafgroupFile.read((char*)&bitmap, sizeof(Byte)*LEAF_GROUP_AMOUNT);
+        }
+        
+        
+        allocatorCatalog.close();
+        freeListFile.close();
+        leafgroupFile.close();
     }
     return false;
 }
