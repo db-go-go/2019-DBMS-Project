@@ -39,6 +39,8 @@ PAllocator::PAllocator() {
             freeListFile.read((char*)&tmp, sizeof(PPointer));
             this->freeList.push_back(tmp);
         }
+        allocatorCatalog.close();
+        freeListFile.close();
     } else {
         // not exist, create catalog and free_list file, then open.
         // TODO
@@ -57,8 +59,6 @@ PAllocator::PAllocator() {
         this->freeNum = 0;
         this->startLeaf = NULL;
     }
-    allocatorCatalog.close();
-    freeListFile.close();
     this->initFilePmemAddr();
 }
 
@@ -165,6 +165,14 @@ bool PAllocator::freeLeaf(PPointer p) {
 
 bool PAllocator::persistCatalog() {
     // TODO
+    string allocatorCatalogPath = DATA_DIR + P_ALLOCATOR_CATALOG_NAME;
+    ifstream allocatorCatalog(allocatorCatalogPath, ios::in);
+    if(allocatorCatalog.is_open()) {
+        allocatorCatalog.close();
+        int catalog_size = 8*2*sizeof(Byte)+sizeof(PPointer);
+        pmem_persist((void*)allocatorCatalogPath, catalog_size);
+        return true;
+    }
     return false;
 }
 
