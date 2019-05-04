@@ -29,11 +29,14 @@ ALL := $(LYCSB) $(YCSB) $(MAIN) $(FPTREE) $(UTILITY) $(PALLOCATOR) $(CLHASH)
 #============================TODO: all below============================
 $(MAIN) :
 
-$(FPTREE) : 
+$(FPTREE) : fptree.cpp $(HEADER_DIR)/utility/fptree.h
+	$(CC) $(CFLAGS) -c fptree.cpp -I $(HEADER_DIR) -g -o $@
 
-$(UTILITY) :
+$(UTILITY) :utility.cpp $(HEADER_DIR)/utility/utility.h
+	$(CC) $(CFLAGS) -c utility.cpp -I $(HEADER_DIR) -g -o $@
 
-$(PALLOCATOR) : 
+$(PALLOCATOR) : p_allocator.cpp $(HEADER_DIR)/utility/p_allocator.h
+	$(CC) $(CFLAGS) -c p_allocator.cpp -I $(HEADER_DIR) -g -o $@
 
 $(CLHASH) : clhash.c $(HEADER_DIR)/utility/clhash.h
 	$(CC) $(CFLAGS) -c clhash.c -I $(HEADER_DIR) -g -o $@
