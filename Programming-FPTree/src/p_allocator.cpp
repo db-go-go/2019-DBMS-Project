@@ -34,39 +34,22 @@ PAllocator::PAllocator() {
         allocatorCatalog.read((char*)&this->maxFileId, sizeof(uint64_t));
         allocatorCatalog.read((char*)&this->freeNum, sizeof(uint64_t));
         allocatorCatalog.read((char*)&this->startLeaf, sizeof(PPointer));
-        for(int i = 0; i < this->freeNum; i ++) {
+        for(uint64_t i = 0; i < this->freeNum; i ++) {
             PPointer tmp;
             freeListFile.read((char*)&tmp, sizeof(PPointer));
             this->freeList.push_back(tmp);
         }
-        allocatorCatalog.close();
-        freeListFile.close();
     } else {
         // not exist, create catalog and free_list file, then open.
         // TODO
-        ofstream allocatorCatalogOut(allocatorCatalogPath, ios::out|ios::binary);
-        ofstream freeListFileOut(freeListPath, ios::out|ios::binary);
-        int maxFileId = 1;//all free
-        int freeNum = 0;
-        PPointer startLeaf = NULL;
-        PPointer freepoint = NULL;
-        allocatorCatalogOut.write((char*)&maxFileId,sizeof(uint64_t));
-        allocatorCatalogOut.write((char*)&freeNum,sizeof(uint64_t));
-        allocatorCatalogOut.write((char*)&startLeaf,sizeof(PPointer));
-        freeListFileOut.write((char*)&freepoint,sizeof(PPointer));
-
-        this->maxFileId = 1;
-        this->freeNum = 0;
-        this->startLeaf = NULL;
-        allocatorCatalogOut.close();
-        freeListFileOut.close();
     }
+    allocatorCatalog.close();
+    freeListFile.close();
     this->initFilePmemAddr();
 }
 
 PAllocator::~PAllocator() {
     // TODO
-    pAllocator = NULL;
 }
 
 const uint64_t LEAF_GROUP_SIZE = LEAF_GROUP_HEAD + LEAF_GROUP_AMOUNT*calLeafSize();
@@ -78,16 +61,17 @@ void PAllocator::initFilePmemAddr() {
         size_t mapped_lenp;
         int is_pmemp;
         string leafPath = DATA_DIR + to_string(i);
-        char* pmem_addr = pmem_map_file((const char *)leafPath, LEAF_GROUP_SIZE, PMEM_FILE_CREATE,
+        const char * c_leafPath = leafPath.c_str();
+        void* pmem_addr = pmem_map_file(c_leafPath, LEAF_GROUP_SIZE, PMEM_FILE_CREATE,
     0666, &mapped_lenp, &is_pmemp);
-        this->fId2PmAddr.insert(pair<uint64_t, char*>(i, pmem_addr));
+        this->fId2PmAddr.insert(pair<uint64_t, char*>(i, (char*)pmem_addr));
     }
 }
 
 // get the pmem address of the target PPointer from the map fId2PmAddr
 char* PAllocator::getLeafPmemAddr(PPointer p) {
     // TODO
-    map<uint64_t, char*>::iterator it = this->fId2PmAddr(p.fileId);
+    map<uint64_t, char*>::iterator it = this->fId2PmAddr.find(p.fileId);
     if(it != this->fId2PmAddr.end()) return it->second;
     return NULL;
 }
@@ -100,7 +84,7 @@ bool PAllocator::getLeaf(PPointer &p, char* &pmem_addr) {
         p = this->freeList[this->freeNum-1];
         this->freeList.pop_back();
         this->freeNum --;
-        pmem_addr = this->fId2PmAddr.find(p.fileId).second;
+        pmem_addr = this->fId2PmAddr.find(p.fileId)->second;
         
         string allocatorCatalogPath = DATA_DIR + P_ALLOCATOR_CATALOG_NAME;
         string freeListPath = DATA_DIR + P_ALLOCATOR_FREE_LIST;
@@ -109,7 +93,7 @@ bool PAllocator::getLeaf(PPointer &p, char* &pmem_addr) {
         ofstream freeListFile(freeListPath, ios::out|ios::binary);
         fstream leafgroupFile(leafgroupPath, ios::in|ios::app|ios::binary);
         
-        allocatorCatalog.seekg(8, ios::beg);
+        allocatorCatalog.seekp(8, ios::beg);
         allocatorCatalog.write((char*)&this->freeNum, sizeof(Byte)*8);
         
         freeListFile.write((char*)&this->freeList, sizeof(PPointer)*this->freeNum);
@@ -117,10 +101,9 @@ bool PAllocator::getLeaf(PPointer &p, char* &pmem_addr) {
         int leaf_index = (p.offset-LEAF_GROUP_HEAD)/calLeafSize();
         uint64_t usedNum;
         string bitmap;
-        leafgroupFile.seekg(ios::beg);
         leafgroupFile.read((char*)&usedNum, sizeof(uint64_t));
         leafgroupFile.read((char*)&bitmap, sizeof(Byte)*LEAF_GROUP_AMOUNT);
-        usedNum ++;
+        usedNum --;
         bitmap[leaf_index] = '1';
         leafgroupFile.seekg(ios::beg);
         leafgroupFile.write((char*)&usedNum, sizeof(uint64_t));
@@ -145,7 +128,7 @@ bool PAllocator::ifLeafFree(PPointer p) {
     // TODO
     if(!this->ifLeafExist(p)) return false;
     for(vector<PPointer>::iterator it = this->freeList.begin(); it != this->freeList.end(); it ++) {
-        if(p == it) return true;
+        if(p == (*it)) return true;
     }
     return false;
 }
@@ -162,37 +145,7 @@ bool PAllocator::ifLeafExist(PPointer p) {
 bool PAllocator::freeLeaf(PPointer p) {
     // TODO
     if(this->ifLeafUsed(p)) {
-        this->freeList.push_back(p);
-        this->freeNum ++;
-        
-        string allocatorCatalogPath = DATA_DIR + P_ALLOCATOR_CATALOG_NAME;
-        string freeListPath = DATA_DIR + P_ALLOCATOR_FREE_LIST;
-        string leafgroupPath = DATA_DIR + to_string(p.fileId);
 
-        uint64_t usedNum;
-        string bitmap;
-        fstream leafgroupFile(leafgroupPath, ios::in|ios::app|ios::binary);
-        leafgroupFile.seekg(ios::beg);
-        leafgroupFile.read((char*)&usedNum, sizeof(uint64_t));
-        leafgroupFile.read((char*)&bitmap, sizeof(Byte)*LEAF_GROUP_AMOUNT);
-        int leaf_index = (p.offset-LEAF_GROUP_HEAD)/calLeafSize();
-        usedNum --;
-        bitmap[leaf_index] = '0';
-        leafgroupFile.seekg(ios::beg);
-        leafgroupFile.write((char*)&usedNum, sizeof(uint64_t));
-        leafgroupFile.write((char*)&bitmap, sizeof(Byte)*LEAF_GROUP_AMOUNT);
-        
-        ofstream allocatorCatalog(allocatorCatalogPath, ios::app|ios::binary);
-        allocatorCatalog.seekg(8, ios::beg);
-        allocatorCatalog.write((char*)&this->freeNum, sizeof(uint64_t));
-
-        ofstream freeListFile(freeListPath, ios::out|ios::binary);
-        freeListFile.write((char*)&this->freeList, sizeof(PPointer)*this->freeNum);
-
-        allocatorCatalog.close();
-        freeListFile.close();
-        leafgroupFile.close();
-        return true;
     }
     return false;
 }
@@ -204,7 +157,7 @@ bool PAllocator::persistCatalog() {
     if(allocatorCatalog.is_open()) {
         allocatorCatalog.close();
         int catalog_size = 8*2*sizeof(Byte)+sizeof(PPointer);
-        pmem_persist((void*)allocatorCatalogPath, catalog_size);
+        pmem_persist((void*)&allocatorCatalogPath, catalog_size);
         return true;
     }
     return false;
@@ -217,10 +170,10 @@ bool PAllocator::persistCatalog() {
 // create a new leafgroup, one file per leafgroup
 bool PAllocator::newLeafGroup() {
     // TODO
-   string leafgroupPath = DATA_DIR + to_string(this->maxFileId);
+    string leafgroupPath = DATA_DIR + to_string(this->maxFileId);
     ofstream leafgroupFile(leafgroupPath, ios::out|ios::binary);
-    if(leafgroupFile.is_open()) 
-        int zero = 0;
+    if(leafgroupFile.is_open()) {
+        char zero = '0'; 
         leafgroupFile.write((char*)&zero, sizeof(Byte)*(8+LEAF_GROUP_AMOUNT));
         /*int len = (LEAF_DEGREE * 2 + 7) / 8;
         file.seekg(len, ios::beg);*/
@@ -234,13 +187,16 @@ bool PAllocator::newLeafGroup() {
         }
         this->maxFileId ++;
         this->freeNum += LEAF_GROUP_AMOUNT;
-        allocatorCatalog.seekg(ios::beg);
+        allocatorCatalog.seekp(ios::beg);
         allocatorCatalog.write((char*)&this->maxFileId, sizeof(uint64_t));
         allocatorCatalog.write((char*)&this->freeNum, sizeof(uint64_t));
         uint64_t offset = LEAF_GROUP_HEAD;
         uint64_t leaf_size = calLeafSize();
-        for(int i = 0; i < LEAF_GROUP_SIZE; i ++) {
-            this->freeList.push_back(PPointer(this->maxFileId-1, offset));
+        for(uint64_t i = 0; i < LEAF_GROUP_SIZE; i ++) {
+            PPointer tmp;
+            tmp.fileId = this->maxFileId-1;
+            tmp.offset = offset;
+            this->freeList.push_back(tmp);
             offset += leaf_size;
         }
         freeListFile.write((char*)&this->freeList, sizeof(PPointer)*this->freeNum);
