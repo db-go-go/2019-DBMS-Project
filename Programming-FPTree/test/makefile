@@ -32,7 +32,7 @@ CPPFLAGS += -isystem $(GTEST_DIR)/include
 CFLAGS = -fPIC -std=c99 -O3 -msse4.2 -mpclmul -march=native -funroll-loops -Wstrict-overflow -Wstrict-aliasing -Wall -Wextra -pedantic -Wshadow
 
 # Flags passed to the C++ compiler.
-CXXFLAGS += -g -Wall -Wextra -pthread -std=c++11
+CXXFLAGS += -g -Wall -Wextra -pthread -std=c++11 
 
 # Google Test libraries
 GTEST_LIBS = libgtest.a libgtest_main.a
@@ -78,14 +78,14 @@ GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
 # compiles fast and for ordinary users its source rarely changes.
 gtest-all.o : $(GTEST_SRCS_)
 	$(CXX) $(CPPFLAGS) -I$(GTEST_DIR) $(CXXFLAGS) -c \
-            $(GTEST_DIR)/src/gtest-all.cc
+            $(GTEST_DIR)/src/gtest-all.cc -D_GLIBCXX_USE_CXX11_ABI=0
 
 gtest_main.o : $(GTEST_SRCS_)
 	$(CXX) $(CPPFLAGS) -I$(GTEST_DIR) $(CXXFLAGS) -c \
-            $(GTEST_DIR)/src/gtest_main.cc
+            $(GTEST_DIR)/src/gtest_main.cc -D_GLIBCXX_USE_CXX11_ABI=0
 
 libgtest.a : gtest-all.o
-	$(AR) $(ARFLAGS) $@ $^
+	$(AR) $(ARFLAGS) $@ $^ 
 
 libgtest_main.a : gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
@@ -93,17 +93,21 @@ libgtest_main.a : gtest-all.o gtest_main.o
 # ===============================TODO: all below=================================
 fptree.o :
 
-utility.o : 
+utility.o : $(USER_DIR)/utility.cpp $(USER_HEADER_DIR)/utility/utility.h $(USER_HEADER_DIR)/utility/clhash.h
+	$(CXX) $(CXXFLAGS) -c $(USER_DIR)/utility.cpp -I$(USER_HEADER_DIR) 
 
-p_allocator.o :
+p_allocator.o : $(USER_DIR)/p_allocator.cpp $(USER_HEADER_DIR)/utility/p_allocator.h
+	$(CXX) $(CXXFLAGS) -c $(USER_DIR)/p_allocator.cpp -I$(USER_HEADER_DIR)
 
 clhash.o : $(USER_DIR)/clhash.c $(USER_HEADER_DIR)/utility/clhash.h
-	$(CC) $(CFLAGS) -c $(USER_DIR)/clhash.c -I $(USER_HEADER_DIR)
+	$(CC) $(CFLAGS) -c $(USER_DIR)/clhash.c -I$(USER_HEADER_DIR)
 
 # utility test
-$(UTILITY_TEST) :
+utility_test.o : utility_test.cpp $(GTEST_HEADERS) $(USER_HEADER_DIR)/utility/p_allocator.h 
+	$(CXX) $(CXXFLAGS) -c utility_test.cpp -I$(USER_HEADER_DIR) -I$(GTEST_HEADERS)
 
-utility_test.o :
+$(UTILITY_TEST) : utility_test.o utility.o p_allocator.o clhash.o $(GTEST_LIBS)
+	$(CXX) $(CXXFLAGS) -L $(GTEST_LIB_DIR) -lgtest_main -lpthread $^ -o $@ -D_GLIBCXX_USE_CXX11_ABI=0
 
 # fptree test
 $(FPTREE_TEST) :
