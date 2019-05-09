@@ -97,16 +97,17 @@ utility.o : $(USER_DIR)/utility.cpp $(USER_HEADER_DIR)/utility/utility.h $(USER_
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -I$(USER_HEADER_DIR) 
 
 p_allocator.o : $(USER_DIR)/p_allocator.cpp $(USER_HEADER_DIR)/utility/p_allocator.h 
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpmem -c $< -I$(USER_HEADER_DIR)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -I$(USER_HEADER_DIR)
+
 clhash.o : $(USER_DIR)/clhash.c $(USER_HEADER_DIR)/utility/clhash.h
 	$(CC) $(CFLAGS) -c $(USER_DIR)/clhash.c -I$(USER_HEADER_DIR)
 
 # utility test
 utility_test.o : utility_test.cpp $(GTEST_HEADERS) $(USER_HEADER_DIR)/utility/p_allocator.h 
-	$(CXX) $(CXXFLAGS) -o $@ -c $< -I$(USER_HEADER_DIR) -I$(GTEST_DIR)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -I$(USER_HEADER_DIR) -I$(GTEST_DIR)
 
 $(UTILITY_TEST) : utility_test.o utility.o p_allocator.o clhash.o $(GTEST_LIBS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -L$(GTEST_LIB_DIR) -lgtest -lpthread -lpmem $^ -o $@  
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $^ -o $@ -lpmem -L$(GTEST_LIB_DIR) -lgtest -lpthread  
 
 # fptree test
 $(FPTREE_TEST) :
