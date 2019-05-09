@@ -94,20 +94,21 @@ libgtest_main.a : gtest-all.o gtest_main.o
 fptree.o :
 
 utility.o : $(USER_DIR)/utility.cpp $(USER_HEADER_DIR)/utility/utility.h $(USER_HEADER_DIR)/utility/clhash.h $(GTEST_HEADERS)
-	$(CXX) $(CXXFLAGS) $< -o $@ -I $(USER_HEADER_DIR)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(USER_HEADER_DIR) -c $<
 
 p_allocator.o : $(USER_DIR)/p_allocator.cpp $(USER_HEADER_DIR)/utility/p_allocator.h $(GTEST_HEADERS)
-	$(CXX) $(CXXFLAGS) -c $< -o $@ -I $(USER_HEADER_DIR)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(USER_HEADER_DIR) -c $<
 
 clhash.o : $(USER_DIR)/clhash.c $(USER_HEADER_DIR)/utility/clhash.h $(GTEST_HEADERS)
-	$(CC) $(CFLAGS) -c $< -o $@ -I $(USER_HEADER_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -I$(USER_HEADER_DIR) -c $<
 
 # utility test
-$(UTILITY_TEST) : utility_test.o $(GTEST_LIBS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< -o $@ -I $(GTEST_LIB_DIR) -lgtest_main -lpthread -D_GLIBCXX_USE_CXX11_ABI=0
 
 utility_test.o : utility_test.cpp $(GTEST_HEADERS) $(USER_HEADER_DIR)/utility/p_allocator.h
-	$(CXX) $(CPPFLAGS) $< -o $@ -I $(USER_HEADER_DIR) -I $(GTEST_HEADERS) $(CXXFLAGS) -D_GLIBCXX_USE_CXX11_ABI=0
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -I$(USER_HEADER_DIR) -I$(GTEST_HEADERS) -c $<
+
+$(UTILITY_TEST) : utility_test.o utility.o p_allocator.o clhash.o gtest_main.o gtest_main.a
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 # fptree test
 $(FPTREE_TEST) :
