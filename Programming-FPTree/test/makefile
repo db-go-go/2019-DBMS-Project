@@ -32,7 +32,7 @@ CPPFLAGS += -isystem $(GTEST_DIR)/include
 CFLAGS = -fPIC -std=c99 -O3 -msse4.2 -mpclmul -march=native -funroll-loops -Wstrict-overflow -Wstrict-aliasing -Wall -Wextra -pedantic -Wshadow
 
 # Flags passed to the C++ compiler.
-CXXFLAGS += -g -Wall -Wextra -pthread -std=c++11 
+CXXFLAGS += -g -Wall -Wextra -pthread -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0
 
 # Google Test libraries
 GTEST_LIBS = libgtest.a libgtest_main.a
@@ -78,11 +78,11 @@ GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
 # compiles fast and for ordinary users its source rarely changes.
 gtest-all.o : $(GTEST_SRCS_)
 	$(CXX) $(CPPFLAGS) -I$(GTEST_DIR) $(CXXFLAGS) -c \
-            $(GTEST_DIR)/src/gtest-all.cc -D_GLIBCXX_USE_CXX11_ABI=0
+            $(GTEST_DIR)/src/gtest-all.cc
 
 gtest_main.o : $(GTEST_SRCS_)
 	$(CXX) $(CPPFLAGS) -I$(GTEST_DIR) $(CXXFLAGS) -c \
-            $(GTEST_DIR)/src/gtest_main.cc -D_GLIBCXX_USE_CXX11_ABI=0
+            $(GTEST_DIR)/src/gtest_main.cc 
 
 libgtest.a : gtest-all.o
 	$(AR) $(ARFLAGS) $@ $^ 
@@ -93,22 +93,20 @@ libgtest_main.a : gtest-all.o gtest_main.o
 # ===============================TODO: all below=================================
 fptree.o :
 
-utility.o : $(USER_DIR)/utility.cpp $(USER_HEADER_DIR)/utility/utility.h $(USER_HEADER_DIR)/utility/clhash.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(USER_HEADER_DIR) -c $<
+utility.o : $(USER_DIR)/utility.cpp $(USER_HEADER_DIR)/utility/utility.h $(USER_HEADER_DIR)/utility/clhash.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -I$(USER_HEADER_DIR) 
 
-p_allocator.o : $(USER_DIR)/p_allocator.cpp $(USER_HEADER_DIR)/utility/p_allocator.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(USER_HEADER_DIR) -c $<
-
-clhash.o : $(USER_DIR)/clhash.c $(USER_HEADER_DIR)/utility/clhash.h $(GTEST_HEADERS)
-	$(CC) $(CFLAGS) $(CXXFLAGS) -I$(USER_HEADER_DIR) -c $<
+p_allocator.o : $(USER_DIR)/p_allocator.cpp $(USER_HEADER_DIR)/utility/p_allocator.h 
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpmem -c $< -I$(USER_HEADER_DIR)
+clhash.o : $(USER_DIR)/clhash.c $(USER_HEADER_DIR)/utility/clhash.h
+	$(CC) $(CFLAGS) -c $(USER_DIR)/clhash.c -I$(USER_HEADER_DIR)
 
 # utility test
+utility_test.o : utility_test.cpp $(GTEST_HEADERS) $(USER_HEADER_DIR)/utility/p_allocator.h 
+	$(CXX) $(CXXFLAGS) -o $@ -c $< -I$(USER_HEADER_DIR) -I$(GTEST_DIR)
 
-utility_test.o : utility_test.cpp $(USER_HEADER_DIR)/utility/*.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -I$(USER_HEADER_DIR) -c $< -L./ -lgtest -lgtest_main -lpthread
-
-$(UTILITY_TEST) : utility_test.o clhash.o p_allocator.o utility.o
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $^ -o $@ -L./ -lgtest -lgtest_main -lpthread
+$(UTILITY_TEST) : utility_test.o utility.o p_allocator.o clhash.o $(GTEST_LIBS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -L$(GTEST_LIB_DIR) -lgtest -lpthread -lpmem $^ -o $@  
 
 # fptree test
 $(FPTREE_TEST) :
