@@ -234,8 +234,7 @@ Value InnerNode::find(const Key& k) {
     // TODO
     int index = this->findIndex(k);
     Value v = (*this->getChild(index)).find(k);
-    if(v != MAX_VALUE) return v;
-    return MAX_VALUE;
+    return v;
 }
 
 // get the children node of this InnerNode
