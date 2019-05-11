@@ -181,7 +181,7 @@ KeyNode *InnerNode::split()
     // right half entries of old node to the new node, others to the old node.
     // TODO
     newChild->key = this->keys[this->degree];
-    InnerNode newIn* = new InnerNode(this->degree, this->tree, false);
+    InnerNode* newIn = new InnerNode(this->degree, this->tree, false);
     newIn->nKeys = this->degree;
     newIn->nChild = this->degree + 1;
     newIn->childrens[0] = this->childrens[this->degree + 1];
@@ -326,9 +326,10 @@ LeafNode::LeafNode(FPTree *t)
 {
     // TODO
     tree = t;
-    degree = t->degree;
+    degree = LEAF_DEGREE;
     isLeaf = 1;
     PAllocator::getAllocator()->getLeaf(pPointer, pmem_addr);
+    n = 0;
     bitmap = new Byte[degree * 2];
     memset(bitmap, '0', degree);
     fingerprints = new Byte[degree * 2];
@@ -340,13 +341,26 @@ LeafNode::LeafNode(FPTree *t)
 // need to call the PAllocator
 LeafNode::LeafNode(PPointer p, FPTree *t)
 {
-    // TODO
     tree = t;
+    degree = LEAF_DEGREE;
     isLeaf = 1;
     pPointer = p;
     pmem_addr = PAllocator::getAllocator()->getLeafPmemAddr(p);
-
-    //Load from file???
+    bitmapSize = degree / 4;
+    bitmap = new Byte[degree * 2];
+    memcpy(bitmap, pmem_addr, bitmapSize);
+    memcpy(fingerprints, pmem_addr[bitmapSize], degree);
+    kv = new KeyValue[LEAF_DEGREE*2];
+    n = 0;
+    uint64_t offset = bitmapSize + degree;
+    for(uint64_t i = 0; i < LEAF_DEGREE*2; i ++)  {
+        if((bitmap & (1 << (LEAF_DEGREE*2-1-i))) == 1) {
+            memcpy(kv[n], pmem_addr[offset], sizeof(KeyValue));
+            n ++;
+            offset += sizeof(KeyValue);
+        }
+    }
+    filePath = DATA_DIR + to_string(p.fileId);
 }
 
 LeafNode::~LeafNode()
