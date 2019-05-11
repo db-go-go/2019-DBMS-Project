@@ -306,12 +306,12 @@ LeafNode::LeafNode(PPointer p, FPTree* t) {
     uint64_t offset = bitmapSize + degree;
     for(int i = 0; i < LEAF_DEGREE*2; i ++)  {
         if(getBit(i) == 1) {
-            memcpy(kv[n], pmem_addr[offset], sizeof(KeyValue));
+            memcpy(&kv[n], pmem_addr+offset, sizeof(KeyValue));
             n ++;
             offset += sizeof(KeyValue);
         }
     }
-    filePath = DATA_DIR + to_string(p.fileId);
+    this->filePath = DATA_DIR + to_string(p.fileId);
 }
 
 LeafNode::~LeafNode() {
@@ -540,6 +540,4 @@ bool FPTree::bulkLoading() {
         return true;
     }
     return false;
-}
-
 }
