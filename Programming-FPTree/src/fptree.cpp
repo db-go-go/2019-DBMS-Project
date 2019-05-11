@@ -280,11 +280,11 @@ LeafNode::LeafNode(FPTree* t) {
     this->degree = LEAF_DEGREE;
     this->isLeaf = true;
     PAllocator::getAllocator()->getLeaf(this->pPointer, this->pmem_addr);
-    this->bitmap = new Byte[2*LEAF_DEGREE];
-    memset(this->bitmap,'0',2*LEAF_DEGREE); 
-    this->fingerprints = new Byte[2*LEAF_DEGREE];
-    this->kv = new KeyValue[2*LEAF_DEGREE];
-    this->bitmapSize = 2*LEAF_DEGREE/sizeof(Byte);
+    this->bitmapSize = (this->degree* 2) / (8*sizeof(Byte));
+    this->bitmap = new Byte[this->bitmapSize];
+    memset(this->bitmap,0,this->bitmapSize); 
+   this->fingerprints = new Byte[2*this->degree];
+    this->kv = new KeyValue[2*this->degree];
 }
 
 // reload the leaf with the specific Persistent Pointer
@@ -296,11 +296,11 @@ LeafNode::LeafNode(PPointer p, FPTree* t) {
     this->isLeaf = true;
     this->pPointer = p;
     this->pmem_addr = PAllocator::getAllocator()-> getLeafPmemAddr(p);
-    this->bitmap = new Byte[2*LEAF_DEGREE];
-    memset(this->bitmap,'0',2*LEAF_DEGREE); 
-    this->fingerprints = new Byte[2*LEAF_DEGREE];
-    this->kv = new KeyValue[2*LEAF_DEGREE];
-    this->bitmapSize = 2*LEAF_DEGREE/sizeof(Byte);
+    this->bitmapSize = (this->degree* 2) / (8*sizeof(Byte));
+    this->bitmap = new Byte[this->bitmapSize];
+    memset(this->bitmap,0,this->bitmapSize); 
+    this->fingerprints = new Byte[2*this->degree];
+    this->kv = new KeyValue[2*this->degree];
 }
 
 LeafNode::~LeafNode() {
@@ -314,18 +314,44 @@ LeafNode::~LeafNode() {
 KeyNode* LeafNode::insert(const Key& k, const Value& v) {
     KeyNode* newChild = NULL;
     // TODO
+    if (this->n+1 >= 2*this->degree) {//full
+        newChild = split();
+    }
+    else {//not full
+        this->insertNonFull(k,v);
+    }
     return newChild;
 }
 
 // insert into the leaf node that is assumed not full
 void LeafNode::insertNonFull(const Key& k, const Value& v) {
     // TODO
+    // linear search for an empty slot
+    uint64_t idx = 0;
+    for (uint64_t i = 0; i < 2*this->degree; i ++) {
+        if (!getBit(i)) {
+            idx = i;
+            break;
+        }
+    }
+    this->kv[idx].k = k;
+    this->kv[idx].v = v;
+    // update bitmap
+    int offset = idx % 8;
+    int rslt = 1;
+    while (offset) {
+        rslt <<= 1;
+        offset;
+    }
+    rslt |= this->bitmap[idx/(8*sizeof(Byte))];
+    persist();
 }
 
 // split the leaf node
 KeyNode* LeafNode::split() {
     KeyNode* newChild = new KeyNode();
     // TODO
+    newChild->key = this->findSplitKey();
     return newChild;
 }
 
@@ -342,7 +368,14 @@ Key LeafNode::findSplitKey() {
 // TIPS: bit operation
 int LeafNode::getBit(const int& idx) {
     // TODO
-    return (int)(this->bitmap[idx]-'0');
+    int offset = idx % (8*sizeof(Byte));
+    int rslt = 1;
+    while (offset) {
+        rslt <<= 1;
+        offset --;
+    }
+    rslt &= this->bitmap[idx/(8*sizeof(Byte))];
+    return rslt;
 }
 
 Key LeafNode::getKey(const int& idx) {
@@ -483,4 +516,5 @@ bool FPTree::bulkLoading() {
     }
     return false;
 }
+
 
