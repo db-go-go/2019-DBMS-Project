@@ -308,10 +308,10 @@ LeafNode::LeafNode(PPointer p, FPTree* t) {
     uint64_t offset = 0;
     for(int i = 0; i < this->bitmapSize; i ++) {
         memcpy(&this->bitmap[i], &pmem_addr[offset], sizeof(Byte));
-//        printf("bitmap[%d] %d %d", i, pmem_addr[offset], this->bitmap[i]);
+//        printf("bitmap[%d] %d\n", i, this->bitmap[i]);
         offset += sizeof(Byte);
     }
-//    printf("\n"); 
+    printf("\n"); 
     this->fingerprints = new Byte[2*this->degree];
     offset += sizeof(PPointer);
     for(int i = 0; i < LEAF_DEGREE*2; i ++) {
@@ -325,8 +325,8 @@ LeafNode::LeafNode(PPointer p, FPTree* t) {
         if(getBit(i) == 1) {
             memcpy(&kv[n].k, &pmem_addr[offset], sizeof(uint64_t));
             memcpy(&kv[n].v, &pmem_addr[offset+sizeof(uint64_t)], sizeof(uint64_t));
- //           printf("LeafNode() :offset[%lu]", offset);
- //           printf("LeafNode() :key[%lu] value[%lu]", kv[n].k, kv[n].v);
+//            printf("LeafNode() :offset[%lu]\n", offset);
+//            printf("LeafNode() :key[%lu] value[%lu]\n", kv[n].k, kv[n].v);
             n ++;
             offset += sizeof(KeyValue);
         }
@@ -375,6 +375,7 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
     // TODO
 
     int slot = LeafNode::findFirstZero();
+//    printf("slot %d\n", slot);
     this->kv[slot].k = k;
     this->kv[slot].v = v;
     this->fingerprints[slot] = keyHash(k);
@@ -383,15 +384,15 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
     this->n ++;
 
     uint64_t offset = slot / 8;
-    memcpy(&pmem_addr[offset], &this->bitmap[slot], sizeof(Byte));
-   
+    memcpy(&pmem_addr[offset], &this->bitmap[slot/8], sizeof(Byte));
+//    printf("inserNonFull() :bitmap[%lu]\n", offset);
     offset = this->bitmapSize*sizeof(Byte) + sizeof(PPointer) + slot*sizeof(Byte);
     memcpy(&pmem_addr[offset], &fingerprints[slot], sizeof(Byte));
     
     offset = this->bitmapSize*sizeof(Byte) + sizeof(PPointer) + this->degree*2*sizeof(Byte) + slot*sizeof(KeyValue);
     memcpy(&pmem_addr[offset], &kv[slot].k,sizeof(uint64_t));
     memcpy(&pmem_addr[offset+sizeof(uint64_t)], &kv[slot].v,sizeof(uint64_t));
- //   printf("inserNonFull() :offset[%lu]", offset);
+//    printf("inserNonFull() :offset[%lu]\n", offset);
     
     persist();
 }
