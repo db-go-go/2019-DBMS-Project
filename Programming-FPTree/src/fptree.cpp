@@ -366,8 +366,8 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
     int slot = LeafNode::findFirstZero();
     this->kv[slot].k = k;
     this->kv[slot].v = v;
-    this->fingerprints[slot] = keyHash(kv);
-    this->bitmap[(slot / 8)] |= (1 << (slot % 8));
+    this->fingerprints[slot] = keyHash(k);
+    this->bitmap[(slot / 8)] |= (1 << (7 - slot % 8));
     persist();
 }
 
