@@ -327,8 +327,10 @@ LeafNode::~LeafNode() {
 }
 
 // insert an entry into the leaf, need to split it if it is full
-KeyNode* LeafNode::insert(const Key& k, const Value& v) {
-        KeyNode *newChild = NULL;
+KeyNode *LeafNode::insert(const Key &k, const Value &v)
+{
+
+    KeyNode *newChild = NULL;
     // TODO
 
     if (this->n + 1 >= 2 * this->degree)
@@ -339,33 +341,36 @@ KeyNode* LeafNode::insert(const Key& k, const Value& v) {
         int slot = LeafNode::findFirstZero();
         this->kv[slot].k = k;
         this->kv[slot].v = v;
-        this->fingerprints[slot] = hash(k);
-        this->bitmap[(idx / 8)] |= (1 << (idx % 8));
+        this->fingerprints[slot] = keyHash(k);
+        this->bitmap[(slot / 8)] |= (1 << (slot % 8));
 
         //update parent
-
+        this->tree->root->insert(splitKey.k, splitKey.v);
     }
     else
     { //not full
         int slot = LeafNode::findFirstZero();
         this->kv[slot].k = k;
         this->kv[slot].v = v;
-        this->fingerprints[slot] = hash(k);
-        this->bitmap[(idx / 8)] |= (1 << (idx % 8));
+        this->fingerprints[slot] = keyHash(k);
+        this->bitmap[(slot / 8)] |= (1 << (slot % 8));
     }
     return newChild;
 }
 
 // insert into the leaf node that is assumed not full
-void LeafNode::insertNonFull(const Key& k, const Value& v) {
+void LeafNode::insertNonFull(const Key &k, const Value &v)
+{
     // TODO
+
     int slot = LeafNode::findFirstZero();
     this->kv[slot].k = k;
     this->kv[slot].v = v;
-    this->fingerprints[slot] = hash(k);
-    this->bitmap[(idx / 8)] |= (1 << (idx % 8));
+    this->fingerprints[slot] = keyHash(kv);
+    this->bitmap[(slot / 8)] |= (1 << (slot % 8));
     persist();
 }
+
 
 // split the leaf node
 KeyNode* LeafNode::split() {
