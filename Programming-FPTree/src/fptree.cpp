@@ -51,9 +51,9 @@ void InnerNode::insertNonFull(const Key& k, Node* const& node) {
     if(this->nChild > 0 && this->nKeys < 2 * this->degree + 1) {
         int index = this->findIndex(k);
         for(int i = this->nKeys-1; i >= index; i --) {
-            this->key[i+1] = this->key[i];
+            this->keys[i+1] = this->keys[i];
         }
-        this->key[index] = k;
+        this->keys[index] = k;
         this->nKeys ++;
         for(int i = this->nChild-1; i >= index+1; i --) {
             this->childrens[i+1] = this->childrens[i];
@@ -72,7 +72,7 @@ KeyNode* InnerNode::insert(const Key& k, const Value& v) {
     if (this->isRoot && this->nKeys == 0) {
         // TODO
         LeafNode* ln = new LeafNode(this->tree);
-        ln.insertNonFull(k, v);
+        ln->insertNonFull(k, v);
         KeyNode leaf;
         leaf.key = k;
         leaf.node = ln;
@@ -124,13 +124,13 @@ KeyNode* InnerNode::insertLeaf(const KeyNode& leaf) {
     // next level is not leaf, just insertLeaf
     // TODO
     KeyNode* kn = NULL;
-    if(!(*this->childrens[0]).isLeaf) {
+    if(!(*this->childrens[0]).ifLeaf()) {
         int index = this->findIndex(leaf.key);
-        kn = (*this->childrens[index]).insertLeaf(leaf);
+        kn = (*this->childrens[index]).insert(leaf.key, leaf.node->find(leaf.key));
     }
     // next level is leaf, insert to childrens array
     // TODO
-    else kn = leaf;
+    else *kn = leaf;
     if(kn != NULL) {
         this->insertNonFull(kn->key, kn->node);
         if(this->nKeys > 2*this->degree) {
@@ -162,7 +162,7 @@ KeyNode* InnerNode::split() {
         newIn.keys[i] = this->keys[this->degree+1+i];
         newIn.childrens[i+1] = this->childrens[this->degree+2+i];
     }
-    newChild.node = &newIn;
+    newChild->node = &newIn;
     this->nKeys = this->degree;
     this->nChild = this->degree+1;
     return newChild;
@@ -434,7 +434,7 @@ Value FPTree::find(Key k) {
 // call the InnerNode and LeafNode print func to print the whole tree
 // TIPS: use Queue
 void FPTree::printTree() {
-    // TODO
+    // TODO:
 }
 
 // bulkLoading the leaf files and reload the tree
@@ -442,6 +442,16 @@ void FPTree::printTree() {
 // if no tree is reloaded, return FALSE
 // need to call the PALlocator
 bool FPTree::bulkLoading() {
-    // TODO
+    // TODO:
+    //判断目标文件夹中有没有数据文件
+    PPointer start = PAllocator::getAllocator()->getStartPointer(); // get first leaf's  PPointer of fptree
+    if (PAllocator::getAllocator()->ifLeafExist(start)) {//有数据文件
+        for (uint64_t i = 0; i < PAllocator::getAllocator()->getFreeNum(); i ++) {
+            PPointer temp;
+            char * pmem_addr;
+            PAllocator::getAllocator()->getLeaf(temp, pmem_addr);
+        }
+        return true;
+    }
     return false;
 }
