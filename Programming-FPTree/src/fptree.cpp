@@ -288,6 +288,7 @@ LeafNode::LeafNode(FPTree* t) {
    this->fingerprints = new Byte[2*this->degree];
     this->kv = new KeyValue[2*this->degree];
     n = 0;
+    this->filePath = DATA_DIR + to_string(this->pPointer.fileId);
 }
 
 // reload the leaf with the specific Persistent Pointer
@@ -301,11 +302,19 @@ LeafNode::LeafNode(PPointer p, FPTree* t) {
     this->pmem_addr = PAllocator::getAllocator()-> getLeafPmemAddr(p);
     this->bitmapSize = (this->degree* 2) / (8*sizeof(Byte));
     this->bitmap = new Byte[this->bitmapSize];
-    memset(this->bitmap,0,this->bitmapSize); 
+    uint64_t offset = 0;
+    for(int i = 0; i < this->bitmapSize; i ++) {
+        memcpy(&this->bitmap[i], pmem_addr+offset, sizeof(Byte));
+        offset += sizeof(Byte);
+    } 
     this->fingerprints = new Byte[2*this->degree];
+    offset += sizeof(PPointer);
+    for(int i = 0; i < LEAF_DEGREE*2; i ++) {
+        memcpy(&fingerprints[n], pmem_addr+offset, sizeof(Byte));
+        offset += sizeof(Byte);
+    }
     this->kv = new KeyValue[2*this->degree];
     n = 0;
-    uint64_t offset = bitmapSize + degree;
     for(int i = 0; i < LEAF_DEGREE*2; i ++)  {
         if(getBit(i) == 1) {
             memcpy(&kv[n], pmem_addr+offset, sizeof(KeyValue));
@@ -345,15 +354,12 @@ KeyNode *LeafNode::insert(const Key &k, const Value &v)
         this->bitmap[(slot / 8)] |= (1 << (slot % 8));
 
         //update parent
-        this->tree->root->insert(splitKey.k, splitKey.v);
+        return newChild;
     }
     else
     { //not full
         int slot = LeafNode::findFirstZero();
-        this->kv[slot].k = k;
-        this->kv[slot].v = v;
-        this->fingerprints[slot] = keyHash(k);
-        this->bitmap[(slot / 8)] |= (1 << (slot % 8));
+        this->insertNonFull(k, v);
     }
     return newChild;
 }
@@ -379,15 +385,16 @@ KeyNode* LeafNode::split() {
     newChild->key = this->findSplitKey();
     LeafNode * newLeafNode = new LeafNode(this->tree);
     Key SplitKey = findSplitKey();
-    for (int i = 0; i < bitmapSize; ++i)
+    for (int i = 0; i < bitmapSize/2; ++i)
     {
-        newLeafNode->bitmap[i] = this->bitmap[i];
-        this->bitmap[i] = !newLeafNode->bitmap[i];
+        newLeafNode->bitmap[i] = 0;
+        newLeafNode->bitmap[bitmapSize/2+i] = this->bitmap[0];
+        this->bitmap[bitmapSize/2+i] = 0;
     }
-    for (int i = 0; i < this->degree * 2; ++i)
+    for (int i = 0; i < this->degree; ++i)
     {
-        newLeafNode->fingerprints[i] = this->fingerprints[i];
-        newLeafNode->kv[i] = this->kv[i];
+        newLeafNode->fingerprints[i] = this->fingerprints[this->degree+i];
+        newLeafNode->kv[i] = this->kv[this->degree+i];
     }
     this->pNext = &(newLeafNode->pPointer);
     newChild->node = newLeafNode;
@@ -442,7 +449,7 @@ Key LeafNode::findSplitKey() {
 // TIPS: bit operation
 int LeafNode::getBit(const int& idx) {
     // TODO
-    return this->bitmap[(idx / 8)] & (1 << (idx % 8)) ? 1 : 0;
+    return this->bitmap[(idx / 8)] & (1 << (7 - idx % 8)) ? 1 : 0;
 }
 
 Key LeafNode::getKey(const int& idx) {
@@ -478,7 +485,7 @@ bool LeafNode::update(const Key& k, const Value& v) {
 Value LeafNode::find(const Key& k) {
     // TODO
     for (uint64_t i = 0; i < 2*LEAF_DEGREE; i ++) {
-        if (this->bitmap[i] == '1') {//有数据的槽
+        if (getBit(i)) {//有数据的槽
             if (this->kv[i].k == k)
                 return this->kv[i].v;
         }
