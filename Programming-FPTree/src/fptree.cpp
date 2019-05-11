@@ -424,14 +424,7 @@ Key LeafNode::findSplitKey() {
 // TIPS: bit operation
 int LeafNode::getBit(const int& idx) {
     // TODO
-    int offset = idx % (8*sizeof(Byte));
-    int rslt = 1;
-    while (offset) {
-        rslt <<= 1;
-        offset --;
-    }
-    rslt &= this->bitmap[idx/(8*sizeof(Byte))];
-    return rslt;
+    return (this->bitmap & (1 << 2*this->degree-1-idx));
 }
 
 Key LeafNode::getKey(const int& idx) {
