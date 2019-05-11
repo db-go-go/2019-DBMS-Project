@@ -150,6 +150,7 @@ bool PAllocator::getLeaf(PPointer &p, char* &pmem_addr) {
 
     //printf("getLeaf() :pmem_addr %s\n", pmem_addr);
     pmem_addr = this->getLeafPmemAddr(p);
+    pmem_addr += p.offset;
     //printf("getLeaf() :pmem_addr %p\n", pmem_addr);
     
 /*    string allocatorCatalogPath = DATA_DIR + P_ALLOCATOR_CATALOG_NAME;
