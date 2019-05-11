@@ -277,14 +277,14 @@ void LeafNode::printNode() {
 LeafNode::LeafNode(FPTree* t) {
     // TODO
     this->tree = t;
-    this->degree = LEAF_DEGREE;
+    this->degree = t->degree;
     this->isLeaf = true;
     PAllocator::getAllocator()->getLeaf(this->pPointer, this->pmem_addr);
-    this->bitmap = new Byte[2*LEAF_DEGREE];
-    memset(this->bitmap,'0',2*LEAF_DEGREE); 
-    this->fingerprints = new Byte[2*LEAF_DEGREE];
-    this->kv = new KeyValue[2*LEAF_DEGREE];
-    this->bitmapSize = 2*LEAF_DEGREE/sizeof(Byte);
+    this->bitmapSize = (this->degree* 2) / (8*sizeof(Byte));
+    this->bitmap = new Byte[this->bitmapSize];
+    memset(this->bitmap,0,this->bitmapSize); 
+   this->fingerprints = new Byte[2*this->degree];
+    this->kv = new KeyValue[2*this->degree];
 }
 
 // reload the leaf with the specific Persistent Pointer
@@ -292,15 +292,15 @@ LeafNode::LeafNode(FPTree* t) {
 LeafNode::LeafNode(PPointer p, FPTree* t) {
     // TODO
     this->tree = t;
-    this->degree = LEAF_DEGREE;
+    this->degree = t->degree;
     this->isLeaf = true;
     this->pPointer = p;
     this->pmem_addr = PAllocator::getAllocator()-> getLeafPmemAddr(p);
-    this->bitmap = new Byte[2*LEAF_DEGREE];
-    memset(this->bitmap,'0',2*LEAF_DEGREE); 
-    this->fingerprints = new Byte[2*LEAF_DEGREE];
-    this->kv = new KeyValue[2*LEAF_DEGREE];
-    this->bitmapSize = 2*LEAF_DEGREE/sizeof(Byte);
+    this->bitmapSize = (this->degree* 2) / (8*sizeof(Byte));
+    this->bitmap = new Byte[this->bitmapSize];
+    memset(this->bitmap,0,this->bitmapSize); 
+    this->fingerprints = new Byte[2*this->degree];
+    this->kv = new KeyValue[2*this->degree];
 }
 
 LeafNode::~LeafNode() {
@@ -314,6 +314,7 @@ LeafNode::~LeafNode() {
 KeyNode* LeafNode::insert(const Key& k, const Value& v) {
     KeyNode* newChild = NULL;
     // TODO
+    
     return newChild;
 }
 
@@ -342,7 +343,14 @@ Key LeafNode::findSplitKey() {
 // TIPS: bit operation
 int LeafNode::getBit(const int& idx) {
     // TODO
-    return (int)(this->bitmap[idx]-'0');
+    int offset = idx % 8;
+    int rslt = 1;
+    while (offset) {
+        rslt <<= 1;
+        offset --;
+    }
+    rslt &= this->bitmap[idx];
+    return rslt;
 }
 
 Key LeafNode::getKey(const int& idx) {
@@ -483,4 +491,5 @@ bool FPTree::bulkLoading() {
     }
     return false;
 }
+
 
