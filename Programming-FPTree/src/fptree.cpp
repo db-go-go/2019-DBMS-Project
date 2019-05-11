@@ -319,6 +319,9 @@ LeafNode::~LeafNode() {
     delete [] this->bitmap;
     delete [] this->fingerprints;
     delete [] this->kv;
+
+    // TODO
+    PAllocator::getAllocator()->freeLeaf(this->pPointer);
 }
 
 // insert an entry into the leaf, need to split it if it is full
