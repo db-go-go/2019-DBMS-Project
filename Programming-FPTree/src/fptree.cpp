@@ -351,7 +351,7 @@ KeyNode *LeafNode::insert(const Key &k, const Value &v)
         this->kv[slot].k = k;
         this->kv[slot].v = v;
         this->fingerprints[slot] = keyHash(k);
-        this->bitmap[(slot / 8)] |= (1 << (slot % 8));
+        this->bitmap[(slot / 8)] |= (1 << (7 - slot % 8));
 
         //update parent
         return newChild;
@@ -379,22 +379,26 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
 
 
 // split the leaf node
-KeyNode* LeafNode::split() {
-    KeyNode* newChild = new KeyNode();
+KeyNode *LeafNode::split()
+{
+    KeyNode *newChild = new KeyNode();
     // TODO
-    newChild->key = this->findSplitKey();
-    LeafNode * newLeafNode = new LeafNode(this->tree);
+    LeafNode newLeafNode = new LeafNode(this->tree);
+    newLeafNode->persist();
     Key SplitKey = findSplitKey();
-    for (int i = 0; i < bitmapSize/2; ++i)
+    for (int i = degree + 1; i < this->degree * 2; ++i)
     {
-        newLeafNode->bitmap[i] = 0;
-        newLeafNode->bitmap[bitmapSize/2+i] = this->bitmap[0];
-        this->bitmap[bitmapSize/2+i] = 0;
-    }
-    for (int i = 0; i < this->degree; ++i)
-    {
-        newLeafNode->fingerprints[i] = this->fingerprints[this->degree+i];
-        newLeafNode->kv[i] = this->kv[this->degree+i];
+        int j = i - degree - 1;
+        if (this->bitmap[(i / 8)] & (1 << (7 - i % 8)))
+        {
+            newLeafNode->bitmap[(j / 8)] |= (1 << (7 - j % 8));
+            this->bitmap[(i / 8)] &= (~(1 << (7 - i % 8)));
+        }
+        newLeafNode->fingerprints[j] = this->fingerprints[i];
+        this->fingerprints[i] = 0;
+        newLeafNode->kv[j] = this->kv[i];
+        this->kv[i].k = 0;
+        this->kv[i].v = 0;
     }
     this->pNext = &(newLeafNode->pPointer);
     newChild->node = newLeafNode;
@@ -440,8 +444,8 @@ void quicksort(KeyValue a[], Byte finger[], Key l, Key r)
 Key LeafNode::findSplitKey() {
     Key midKey = 0;
     // TODO
-    quicksort(this->kv, this->fingerprints, 0, 2 * LEAF_DEGREE - 1);
-    midKey = this->kv[LEAF_DEGREE].k;
+    quicksort(this->kv, this->fingerprints, 0, 2 * degree - 1);
+    midKey = this->kv[degree].k;
     return midKey;
 }
 
