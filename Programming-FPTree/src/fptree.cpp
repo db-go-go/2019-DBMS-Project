@@ -319,66 +319,110 @@ LeafNode::~LeafNode() {
     delete [] this->bitmap;
     delete [] this->fingerprints;
     delete [] this->kv;
+    PAllocator::getAllocator()->freeLeaf(this->pPointer);
 }
 
 // insert an entry into the leaf, need to split it if it is full
-KeyNode* LeafNode::insert(const Key& k, const Value& v) {
-    KeyNode* newChild = NULL;
+KeyNode *LeafNode::insert(const Key &k, const Value &v)
+{
+    KeyNode *newChild = NULL;
     // TODO
-    if (this->n+1 >= 2*this->degree) {//full
-        newChild = split();
-    }
-    else {//not full
-        this->insertNonFull(k,v);
-    }
+    Key splitKey = findSplitKey();
+
+    int slot = LeafNode::findFirstZero();
+    this->kv[slot].k = k;
+    this->kv[slot].v = v;
+    this->fingerprints[slot] = hash(k);
+    this->bitmap[(idx / 8)] |= (1 << (idx % 8));
     persist();
+
     return newChild;
 }
 
 // insert into the leaf node that is assumed not full
-void LeafNode::insertNonFull(const Key& k, const Value& v) {
+void LeafNode::insertNonFull(const Key &k, const Value &v)
+{
     // TODO
-    int idx = this->findFirstZero();
-    this->kv[idx].k = k;
-    this->kv[idx].v = v;
-    // update bitmap
-    int offset = idx % 8;
-    int rslt = 1;
-    while (offset) {
-        rslt <<= 1;
-        offset;
-    }
-    this->bitmap[idx/(8*sizeof(Byte))] |= rslt;
+
+    int slot = LeafNode::findFirstZero();
+    this->kv[slot].k = k;
+    this->kv[slot].v = v;
+    this->fingerprints[slot] = hash(k);
+    this->bitmap[(idx / 8)] |= (1 << (idx % 8));
+    persist();
 }
 
 // split the leaf node
-KeyNode* LeafNode::split() {
-    KeyNode* newChild = new KeyNode();
+KeyNode *LeafNode::split()
+{
+    KeyNode *newChild = new KeyNode();
     // TODO
-    newChild->key = this->findSplitKey();
-    LeafNode * newLeafNode = new LeafNode(this->tree);
+    LeafNode newLeafNode = new LeafNode(this->tree);
+    // Byte*      bitmap;
+    // PPointer*  pNext;
+    // Byte*      fingerprints;
+    // KeyValue*  kv;
+    // int        n;
+    // uint64_t   bitmapSize;
+    newLeafNode->persist();
     Key SplitKey = findSplitKey();
     for (int i = 0; i < bitmapSize; ++i)
     {
         newLeafNode->bitmap[i] = this->bitmap[i];
         this->bitmap[i] = !newLeafNode->bitmap[i];
     }
+    newLeafNode->persist();
+    persist();
     for (int i = 0; i < this->degree * 2; ++i)
     {
         newLeafNode->fingerprints[i] = this->fingerprints[i];
         newLeafNode->kv[i] = this->kv[i];
     }
-    this->pNext = &(newLeafNode->pPointer);
-    newChild->node = newLeafNode;
+    newLeafNode->persist();
+    this->pNext = newLeafNode->pPointer;
+    persist();
+    newChild = newLeafNode;
     return newChild;
 }
 
 // use to find a mediant key and delete entries less then middle
 // called by the split func to generate new leaf-node
 // qsort first then find
-Key LeafNode::findSplitKey() {
+void quicksort(KeyValue *a, Byte *finger, ll l, ll r)
+{
+    ll mark = a[l].k;
+    Byte fint = finger[];
+    ll i = l, j = r;
+    if (l >= r)
+        return;
+    while (i != j)
+    {
+        while (i < j && a[j].k >= mark)
+            j--;
+        if (i < j)
+        {
+            a[i] = a[j];
+            finger[i] = finger[j];
+        }
+        while (i < j && a[i].k <= mark)
+            i++;
+        if (i < j)
+        {
+            a[j] = a[i];
+            finger[j] = finger[i];
+        }
+    }
+    a[i] = mark;
+    finger[i] = fint;
+    quicksort(a, finger, l, i - 1);
+    quicksort(a, finger, i + 1, r);
+}
+Key LeafNode::findSplitKey()
+{
     Key midKey = 0;
     // TODO
+    quicksort(this->kv, this->fingerprints, 0, 2 * degree - 1);
+    midKey = this->kv[degree];
     return midKey;
 }
 
