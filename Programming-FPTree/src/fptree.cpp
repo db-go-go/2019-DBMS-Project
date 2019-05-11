@@ -376,11 +376,11 @@ KeyNode* LeafNode::split() {
 // use to find a mediant key and delete entries less then middle
 // called by the split func to generate new leaf-node
 // qsort first then find
-void quicksort(KeyValue *a, Byte *finger, ll l, ll r)
+void quicksort(KeyValue a[], Byte finger[], Key l, Key r)
 {
-    ll mark = a[l].k;
-    Byte fint = finger[];
-    ll i = l, j = r;
+    Key mark = a[l].k;
+    Byte fint = finger[l];
+    Key i = l, j = r;
     if (l >= r)
         return;
     while (i != j)
@@ -400,7 +400,7 @@ void quicksort(KeyValue *a, Byte *finger, ll l, ll r)
             finger[j] = finger[i];
         }
     }
-    a[i] = mark;
+    a[i].k = mark;
     finger[i] = fint;
     quicksort(a, finger, l, i - 1);
     quicksort(a, finger, i + 1, r);
@@ -412,8 +412,8 @@ void quicksort(KeyValue *a, Byte *finger, ll l, ll r)
 Key LeafNode::findSplitKey() {
     Key midKey = 0;
     // TODO
-    quicksort(this->kv, this->fingerprints, 0, 2 * degree - 1);
-    midKey = this->kv[degree];
+    quicksort(this->kv, this->fingerprints, 0, 2 * LEAF_DEGREE - 1);
+    midKey = this->kv[LEAF_DEGREE].k;
     return midKey;
 }
 
