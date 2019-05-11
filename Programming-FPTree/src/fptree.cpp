@@ -232,6 +232,9 @@ bool InnerNode::update(const Key& k, const Value& v) {
 // find the target value with the search key, return MAX_VALUE if it fails.
 Value InnerNode::find(const Key& k) {
     // TODO
+    int index = this->findIndex(k);
+    Value v = (*this->getChild(index)).find(k);
+    if(v != MAX_VALUE) return v;
     return MAX_VALUE;
 }
 
