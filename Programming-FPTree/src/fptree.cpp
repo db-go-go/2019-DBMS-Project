@@ -384,7 +384,7 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
     offset = this->bitmapSize*sizeof(Byte) + sizeof(PPointer) + slot*sizeof(Byte);
     memcpy(&pmem_addr[offset], &fingerprints[slot], sizeof(Byte));
     
-    offset = this->bitmapSize*sizeof(Byte) + sizeof(PPointer) + this->degree*sizeof(Byte) + slot*sizeof(KeyValue);
+    offset = this->bitmapSize*sizeof(Byte) + sizeof(PPointer) + this->degree*sizeof(Byte) + slot*2*sizeof(KeyValue);
     memcpy(&pmem_addr[offset], &kv[slot].k,sizeof(uint64_t));
     memcpy(&pmem_addr[offset+sizeof(uint64_t)], &kv[slot].v,sizeof(uint64_t));
     
