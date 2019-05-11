@@ -304,8 +304,8 @@ LeafNode::LeafNode(PPointer p, FPTree* t) {
     this->kv = new KeyValue[2*this->degree];
     n = 0;
     uint64_t offset = bitmapSize + degree;
-    for(uint64_t i = 0; i < LEAF_DEGREE*2; i ++)  {
-        if((bitmap & (1 << (LEAF_DEGREE*2-1-i))) == 1) {
+    for(int i = 0; i < LEAF_DEGREE*2; i ++)  {
+        if(getBit(i) == 1) {
             memcpy(kv[n], pmem_addr[offset], sizeof(KeyValue));
             n ++;
             offset += sizeof(KeyValue);
