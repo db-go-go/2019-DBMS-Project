@@ -5,17 +5,39 @@ using namespace std;
 // Initial the new InnerNode
 InnerNode::InnerNode(const int& d, FPTree* const& t, bool _isRoot) {
     // TODO
+    this->tree = t;
+    this->degree = d;
+    this->isLeaf = false;
+
+    this->isRoot = _isRoot;
+    this->nKeys = 0;
+    this->nChild = 0;
+    this->keys = new Key[2 * d + 1];
+    this->childrens = new Node*[2* d + 2];
 }
 
 // delete the InnerNode
 InnerNode::~InnerNode() {
     // TODO
+    delete[] this->keys;
+    delete[] this->childrens;
 }
 
 // binary search the first key in the innernode larger than input key
 int InnerNode::findIndex(const Key& k) {
     // TODO
-    return 0;
+    int low = 0, high = nKeys, middle = 0;
+    while(low < high) {
+        middle = (low + high)/2;
+        if(k == this->keys[middle]) {
+            return middle + 1;
+        } else if(k < this->keys[middle]) {
+            high = middle;
+        } else if(k > this->keys[middle]) {
+            low = middle + 1;
+        }
+    }
+    return low;
 }
 
 // insert the node that is assumed not full
@@ -26,6 +48,19 @@ int InnerNode::findIndex(const Key& k) {
 // WARNING: can not insert when it has no entry
 void InnerNode::insertNonFull(const Key& k, Node* const& node) {
     // TODO
+    if(this->nChild > 0 && this->nKeys < 2 * this->degree + 1) {
+        int index = this->findIndex(k);
+        for(int i = this->nKeys-1; i >= index; i --) {
+            this->key[i+1] = this->key[i];
+        }
+        this->key[index] = k;
+        this->nKeys ++;
+        for(int i = this->nChild-1; i >= index+1; i --) {
+            this->childrens[i+1] = this->childrens[i];
+        }
+        this->childrens[index+1] = node;
+        this->nChild ++;
+    }
 }
 
 // insert func
@@ -36,11 +71,31 @@ KeyNode* InnerNode::insert(const Key& k, const Value& v) {
     // 1.insertion to the first leaf(only one leaf)
     if (this->isRoot && this->nKeys == 0) {
         // TODO
+        LeafNode* ln = new LeafNode(this->tree);
+        ln.insertNonFull(k, v);
+        KeyNode leaf;
+        leaf.key = k;
+        leaf.node = ln;
+        this->insertLeaf(leaf);
         return newChild;
     }
     
     // 2.recursive insertion
     // TODO
+    int index = this->findIndex(k);
+    KeyNode* kn = this->childrens[index]->insert(k, v);
+    if(kn != NULL) {
+        this->insertNonFull(kn->key, kn->node);
+        if(this->nKeys > this->degree*2) {
+            newChild = this->split();
+            if(this->isRoot) {
+                InnerNode newRoot(this->degree, this->tree, true);
+                (*this->tree).changeRoot(&newRoot);
+                newRoot.insertNonFull(newChild->key, newChild->node);
+                newChild = NULL;
+            }
+        }
+    }
     return newChild;
 }
 
@@ -164,6 +219,9 @@ void InnerNode::printNode() {
     }
     cout << "|" << "    ";
 }
+
+
+
 
 // print the LeafNode
 void LeafNode::printNode() {
