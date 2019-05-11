@@ -397,7 +397,7 @@ KeyNode *LeafNode::split()
 {
     KeyNode *newChild = new KeyNode();
     // TODO
-    LeafNode newLeafNode = new LeafNode(this->tree);
+    LeafNode *newLeafNode = new LeafNode(this->tree);
     newLeafNode->persist();
     Key SplitKey = findSplitKey();
     for (int i = degree + 1; i < this->degree * 2; ++i)
