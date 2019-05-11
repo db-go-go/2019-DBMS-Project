@@ -89,8 +89,11 @@ KeyNode* InnerNode::insert(const Key& k, const Value& v) {
         if(this->nKeys > this->degree*2) {
             newChild = this->split();
             if(this->isRoot) {
+                this->isRoot = false;
                 InnerNode newRoot(this->degree, this->tree, true);
                 (*this->tree).changeRoot(&newRoot);
+                newRoot.childrens[0] = this;
+                this->nChild ++;
                 newRoot.insertNonFull(newChild->key, newChild->node);
                 newChild = NULL;
             }
@@ -107,6 +110,12 @@ KeyNode* InnerNode::insertLeaf(const KeyNode& leaf) {
     // first and second leaf insertion into the tree
     if (this->isRoot && this->nKeys == 0) {
         // TODO
+        this->childrens[this->nChild] = leaf.node;
+        this->nChild ++;
+        if(this->nChild == 2) {
+            this->nKeys ++;
+            this->keys[0] = leaf.key;
+        }
         return newChild;
     }
     
@@ -114,10 +123,29 @@ KeyNode* InnerNode::insertLeaf(const KeyNode& leaf) {
     // Tip: please judge whether this InnerNode is full
     // next level is not leaf, just insertLeaf
     // TODO
-
+    KeyNode* kn = NULL;
+    if(!(*this->childrens[0]).isLeaf) {
+        int index = this->findIndex(leaf.key);
+        kn = (*this->childrens[index]).insertLeaf(leaf);
+    }
     // next level is leaf, insert to childrens array
     // TODO
-
+    else kn = leaf;
+    if(kn != NULL) {
+        this->insertNonFull(kn->key, kn->node);
+        if(this->nKeys > 2*this->degree) {
+            newChild = this->split();
+            if(this->isRoot) {
+                this->isRoot = false;
+                InnerNode newRoot(this->degree, this->tree, true);
+                (*this->tree).changeRoot(&newRoot);
+                newRoot.childrens[0] = this;
+                this->nChild ++;
+                newRoot.insertNonFull(newChild->key, newChild->node);
+                newChild = NULL;
+            }
+        }
+    }
     return newChild;
 }
 
@@ -125,7 +153,18 @@ KeyNode* InnerNode::split() {
     KeyNode* newChild = new KeyNode();
     // right half entries of old node to the new node, others to the old node. 
     // TODO
-
+    newChild->key = this->keys[this->degree];
+    InnerNode newIn(this->degree, this->tree, false);
+    newIn.nKeys = this->degree;
+    newIn.nChild = this->degree+1;
+    newIn.childrens[0] = this->childrens[this->degree+1];
+    for(uint64_t i = 0; i < this->degree; i ++) {
+        newIn.keys[i] = this->keys[this->degree+1+i];
+        newIn.childrens[i+1] = this->childrens[this->degree+2+i];
+    }
+    newChild.node = &newIn;
+    this->nKeys = this->degree;
+    this->nChild = this->degree+1;
     return newChild;
 }
 
