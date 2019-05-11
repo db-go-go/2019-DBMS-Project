@@ -565,6 +565,7 @@ void FPTree::printTree() {
 bool FPTree::bulkLoading() {
     // TODO:
     //判断目标文件夹中有没有数据文件
+    /*
     PPointer start = PAllocator::getAllocator()->getStartPointer(); // get first leaf's  PPointer of fptree
     if (PAllocator::getAllocator()->ifLeafExist(start)) {//有数据文件
         for (uint64_t i = 0; i < PAllocator::getAllocator()->getFreeNum(); i ++) {
@@ -575,4 +576,12 @@ bool FPTree::bulkLoading() {
         return true;
     }
     return false;
+    */
+    PPointer p = PAllocator::getAllocator()->getStartPointer(); // get first leaf's  PPointer of fptree
+    if(p.fileId == ILLEGAL_FILE_ID) return false;
+    while(p.fileId != ILLEGAL_FILE_ID) {
+        LeafNode* leaf = new LeafNode(p, this);
+        (*this->root).insertLeaf(leaf);
+    }
+    return true;
 }
