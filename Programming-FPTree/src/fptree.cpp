@@ -581,7 +581,10 @@ bool FPTree::bulkLoading() {
     if(p.fileId == ILLEGAL_FILE_ID) return false;
     while(p.fileId != ILLEGAL_FILE_ID) {
         LeafNode* leaf = new LeafNode(p, this);
-        (*this->root).insertLeaf(leaf);
+        KeyNode kn_leaf;
+        kn_leaf.key = leaf->getKey(0);
+        kn_leaf.node = leaf;
+        (*this->root).insertLeaf(&kn_leaf);
     }
     return true;
 }
