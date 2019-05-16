@@ -26,10 +26,12 @@ InnerNode::~InnerNode() {
 // binary search the first key in the innernode larger than input key
 int InnerNode::findIndex(const Key& k) {
     // TODO
+ //   printf("findIndex(): key %lu begin\n", k);
     int low = 0, high = nKeys, middle = 0;
     while(low < high) {
         middle = (low + high)/2;
         if(k == this->keys[middle]) {
+//            printf("findIndex(): key %lu finish\n", k);
             return middle + 1;
         } else if(k < this->keys[middle]) {
             high = middle;
@@ -37,6 +39,7 @@ int InnerNode::findIndex(const Key& k) {
             low = middle + 1;
         }
     }
+//    printf("findIndex(): key %lu finish\n", k);
     return low;
 }
 
@@ -48,8 +51,42 @@ int InnerNode::findIndex(const Key& k) {
 // WARNING: can not insert when it has no entry
 void InnerNode::insertNonFull(const Key& k, Node* const& node) {
     // TODO
-    if(this->nChild > 0 && this->nKeys < 2 * this->degree + 1) {
+    if(this->nChild > 0 && this->nKeys <= 2 * this->degree + 1) {
         int index = this->findIndex(k);
+        // ATTENTION!!
+        if(index == 0) {
+            Node* n_t = this->getChild(0);
+            int minKey = MAX_KEY;
+            if(n_t->ifLeaf()) {
+                LeafNode* l_t = (LeafNode*)n_t;
+                for(int i = 0; i < LEAF_DEGREE*2; i ++) {
+                    if(l_t->getBit(i)) {
+                        if(l_t->kv[i].k < minKey) minKey = l_t->kv[i].k;
+                    }
+                }
+            }
+            else {
+                InnerNode* i_t = (InnerNode*)n_t;
+                minKey = i_t->keys[0];
+            }
+            if(minKey > k) {
+                this->childrens[0] = node;
+
+                for(int i = this->nKeys-1; i >= index; i --) {
+                    this->keys[i+1] = this->keys[i];
+                }
+                this->keys[index] = minKey;
+                this->nKeys ++;
+                for(int i = this->nChild-1; i >= index+1; i --) {
+                    this->childrens[i+1] = this->childrens[i];
+                }
+                this->childrens[index+1] = n_t;
+                this->nChild ++;
+
+                return ;
+            }
+        }
+//        printf("insertNonFull() :index %d key %lu %lu\n", index, k, this->keys[index]);
         for(int i = this->nKeys-1; i >= index; i --) {
             this->keys[i+1] = this->keys[i];
         }
@@ -61,6 +98,7 @@ void InnerNode::insertNonFull(const Key& k, Node* const& node) {
         this->childrens[index+1] = node;
         this->nChild ++;
     }
+//    printf("insertNonFull) :nKeys %d nChild %d\n", this->nKeys, this->nChild);
 }
 
 // insert func
@@ -90,11 +128,13 @@ KeyNode* InnerNode::insert(const Key& k, const Value& v) {
             newChild = this->split();
             if(this->isRoot) {
                 this->isRoot = false;
-                InnerNode newRoot(this->degree, this->tree, true);
-                (*this->tree).changeRoot(&newRoot);
-                newRoot.childrens[0] = this;
-                this->nChild ++;
-                newRoot.insertNonFull(newChild->key, newChild->node);
+                InnerNode* newRoot = new InnerNode(this->degree, this->tree, true);
+                (*this->tree).changeRoot(newRoot);
+                newRoot->childrens[0] = this;
+                newRoot->childrens[1] = newChild->node;
+                newRoot->nChild += 2;
+                newRoot->keys[0] = newChild->key;
+                newRoot->nKeys ++;
                 newChild = NULL;
             }
         }
@@ -106,6 +146,8 @@ KeyNode* InnerNode::insert(const Key& k, const Value& v) {
 // used by the bulkLoading func
 // inserted data: | minKey of leaf | LeafNode* |
 KeyNode* InnerNode::insertLeaf(const KeyNode& leaf) {
+ //   printNode();
+//    printf("insertLeaf() :begin insertLeaf %lu %lp\n", leaf.key, leaf.node);
     KeyNode* newChild = NULL;
     // first and second leaf insertion into the tree
     if (this->isRoot && this->nKeys == 0) {
@@ -113,8 +155,21 @@ KeyNode* InnerNode::insertLeaf(const KeyNode& leaf) {
         this->childrens[this->nChild] = leaf.node;
         this->nChild ++;
         if(this->nChild == 2) {
+            Key minKey = MAX_KEY;
+            for(int i = 0; i < this->degree*2; i ++) {
+                if((*(LeafNode*)this->childrens[0]).getBit(i)) {
+                    if((*(LeafNode*)this->childrens[0]).kv[i].k < minKey) 
+                        minKey = (*(LeafNode*)this->childrens[0]).kv[i].k;
+                }
+            }
             this->nKeys ++;
-            this->keys[0] = leaf.key;
+            if(minKey < leaf.key)
+                this->keys[0] = leaf.key;
+            else {
+                this->childrens[1] = this->childrens[0];
+                this->childrens[0] = leaf.node;
+                this->keys[0] = minKey;
+            }
         }
         return newChild;
     }
@@ -123,48 +178,67 @@ KeyNode* InnerNode::insertLeaf(const KeyNode& leaf) {
     // Tip: please judge whether this InnerNode is full
     // next level is not leaf, just insertLeaf
     // TODO
-    KeyNode* kn = NULL;
+//    printf("insertLeaf() :begin kn\n");
+    KeyNode* kn = new KeyNode();
+//    printf("insertLeaf() :nKeys %d degree %d\n", this->nKeys,  this->degree);
     if(!(*this->childrens[0]).ifLeaf()) {
+ //       printf("insertLeaf() :recursive insertLeaf\n");
         int index = this->findIndex(leaf.key);
-        kn = this->insertLeaf(leaf);
+        kn = (*(InnerNode*)this->childrens[index]).insertLeaf(leaf);
     }
     // next level is leaf, insert to childrens array
     // TODO
-    else *kn = leaf;
+    else {
+ //       printf("insertLeaf() :begin kn set\n");
+        *kn = leaf;
+ //       printf("insertLeaf() :kn set ok\n");
+    }
     if(kn != NULL) {
+ //       printf("insertLeaf() :begin insertNonFull\n");
         this->insertNonFull(kn->key, kn->node);
+//        printf("insertLeaf() :insertNonFull ok\n");
         if(this->nKeys > 2*this->degree) {
             newChild = this->split();
             if(this->isRoot) {
                 this->isRoot = false;
-                InnerNode newRoot(this->degree, this->tree, true);
-                (*this->tree).changeRoot(&newRoot);
-                newRoot.childrens[0] = this;
-                this->nChild ++;
-                newRoot.insertNonFull(newChild->key, newChild->node);
+                InnerNode* newRoot = new InnerNode(this->degree, this->tree, true);
+                (*this->tree).changeRoot(newRoot);
+                newRoot->childrens[0] = this;
+                newRoot->childrens[1] = newChild->node;
+                newRoot->nChild += 2;
+                newRoot->keys[0] = newChild->key;
+                newRoot->nKeys ++;
                 newChild = NULL;
             }
         }
     }
+  //  printf("insertLeaf() :nChild %d\n", this->nChild);
+//    printf("insertLeaf() : insert leaf %lu %pok\n", leaf.key, leaf.node);
     return newChild;
 }
 
 KeyNode* InnerNode::split() {
+/*    printf("\nbefore: \n");
+    printNode();*/
     KeyNode* newChild = new KeyNode();
     // right half entries of old node to the new node, others to the old node. 
     // TODO
     newChild->key = this->keys[this->degree];
-    InnerNode newIn(this->degree, this->tree, false);
-    newIn.nKeys = this->degree;
-    newIn.nChild = this->degree+1;
-    newIn.childrens[0] = this->childrens[this->degree+1];
+    InnerNode* newIn = new InnerNode(this->degree, this->tree, false);
+    newIn->nKeys = this->degree;
+    newIn->nChild = this->degree+1;
+    newIn->childrens[0] = this->childrens[this->degree+1];
     for(uint64_t i = 0; i < this->degree; i ++) {
-        newIn.keys[i] = this->keys[this->degree+1+i];
-        newIn.childrens[i+1] = this->childrens[this->degree+2+i];
+        newIn->keys[i] = this->keys[this->degree+1+i];
+        newIn->childrens[i+1] = this->childrens[this->degree+2+i];
     }
-    newChild->node = &newIn;
+    newChild->node = newIn;
     this->nKeys = this->degree;
     this->nChild = this->degree+1;
+/*    printf("\nleft: \n");
+    printNode();
+    printf("\nright: \n");
+    newIn->printNode();*/
     return newChild;
 }
 
@@ -232,8 +306,22 @@ bool InnerNode::update(const Key& k, const Value& v) {
 // find the target value with the search key, return MAX_VALUE if it fails.
 Value InnerNode::find(const Key& k) {
     // TODO
+ //   printNode();
+//    printf("InnerNode::find()\n");
     int index = this->findIndex(k);
-    Value v = (*this->getChild(index)).find(k);
+/*    if(k == 114) {
+        
+//        printf("nChild %d\n", this->nChild);
+        InnerNode* n = (InnerNode*)this->getChild(index);
+        printf("check :key %d\n", n->keys[0]);
+    }*/
+/*    if(index > this->nKeys-1)
+        printf("InnerNode::find() : key %lu index %d >= %lu\n", k, index, this->keys[index-1]);
+    else
+        printf("InnerNode::find() : key %lu index %d < %lu\n", k, index, this->keys[index]);
+*/
+    Value v;
+    v = (*this->getChild(index)).find(k);
     return v;
 }
 
@@ -290,6 +378,7 @@ LeafNode::LeafNode(FPTree* t) {
     n = 0;
     this->filePath = DATA_DIR + to_string(this->pPointer.fileId);
 //    printf("LeafNode(1) : %p\n", this->pmem_addr);
+//    printf("LeafNode(1) : %d offset %lu\n", this->pPointer.fileId, this->pPointer.offset);
 }
 
 // reload the leaf with the specific Persistent Pointer
@@ -301,14 +390,14 @@ LeafNode::LeafNode(PPointer p, FPTree* t) {
     this->isLeaf = true;
     this->pPointer = p;
     this->pmem_addr = PAllocator::getAllocator()-> getLeafPmemAddr(p);
- //   printf("LeafNode(2) : %p\n", this->pmem_addr);
-//    printf("fileId %lu offset %lu pmem_addr %p\n", p.fileId, p.offset, this->pmem_addr);
+//    printf("LeafNode(2) : %p\n", this->pmem_addr);
+ //   printf("LeafNode(2) :fileId %lu offset %lu pmem_addr %p\n", p.fileId, p.offset, this->pmem_addr);
     this->bitmapSize = (this->degree* 2) / (8*sizeof(Byte));
     this->bitmap = new Byte[this->bitmapSize];
     uint64_t offset = 0;
     for(int i = 0; i < this->bitmapSize; i ++) {
         memcpy(&this->bitmap[i], &pmem_addr[offset], sizeof(Byte));
-//        printf("bitmap[%d] %d\n", i, this->bitmap[i]);
+//        printf("bitmap[%d] %p %d", i, pmem_addr[offset], this->bitmap[i]);
         offset += sizeof(Byte);
     }
     printf("\n"); 
@@ -332,6 +421,7 @@ LeafNode::LeafNode(PPointer p, FPTree* t) {
         }
     }
     this->filePath = DATA_DIR + to_string(p.fileId);
+//    printf("LeafNode(2) :finish\n");
 }
 
 LeafNode::~LeafNode() {
@@ -341,7 +431,7 @@ LeafNode::~LeafNode() {
     delete [] this->kv;
 
     // TODO
-    PAllocator::getAllocator()->freeLeaf(this->pPointer);
+//    PAllocator::getAllocator()->freeLeaf(this->pPointer);
 }
 
 // insert an entry into the leaf, need to split it if it is full
@@ -350,20 +440,13 @@ KeyNode *LeafNode::insert(const Key &k, const Value &v)
 
     KeyNode *newChild = NULL;
     // TODO
-
-    if (this->n + 1 >= 2 * this->degree)
+    this->insertNonFull(k, v);
+/*    this->printNode();
+    printf("n: %d\n", this->n);*/
+    if (this->n >= 2 * this->degree)
     { //full
+ //       printf("LeafNode::insert() : need to split\n");
         newChild = split();
-        Key splitKey = findSplitKey();
-
-        this->insertNonFull(k, v);
-
-        //update parent
-        return newChild;
-    }
-    else
-    { //not full
-        this->insertNonFull(k, v);
     }
 
     return newChild;
@@ -375,7 +458,6 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
     // TODO
 
     int slot = LeafNode::findFirstZero();
-//    printf("slot %d\n", slot);
     this->kv[slot].k = k;
     this->kv[slot].v = v;
     this->fingerprints[slot] = keyHash(k);
@@ -385,7 +467,7 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
 
     uint64_t offset = slot / 8;
     memcpy(&pmem_addr[offset], &this->bitmap[slot/8], sizeof(Byte));
-//    printf("inserNonFull() :bitmap[%lu]\n", offset);
+   
     offset = this->bitmapSize*sizeof(Byte) + sizeof(PPointer) + slot*sizeof(Byte);
     memcpy(&pmem_addr[offset], &fingerprints[slot], sizeof(Byte));
     
@@ -400,27 +482,61 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
 
 // split the leaf node
 KeyNode* LeafNode::split() {
+    
+    
     KeyNode* newChild = new KeyNode();
     // TODO
-    newChild->key = this->findSplitKey();
     LeafNode * newLeafNode = new LeafNode(this->tree);
     Key SplitKey = findSplitKey();
+//    printf("split() :find SplitKey %lu\n", SplitKey);
+/*    printf("\nbefore: \n");
+    this->printNode();*/
     for (int i = 0; i < bitmapSize/2; ++i)
     {
         newLeafNode->bitmap[i] = 0;
         newLeafNode->bitmap[bitmapSize/2+i] = this->bitmap[0];
         this->bitmap[bitmapSize/2+i] = 0;
     }
+ //   printf("split() :set bitmap ok\n");
+/*
     for (int i = 0; i < this->degree; ++i)
     {
-        newLeafNode->fingerprints[i] = this->fingerprints[this->degree+i];
-        newLeafNode->kv[i] = this->kv[this->degree+i];
+        KeyValue kv_new = this->kv[this->degree+i];
+        newLeafNode->insertNonFull(kv_new.k, kv_new.v);
     }
-    this->pNext = &(newLeafNode->pPointer);
+*/
+
+    for(int i = 0; i < this->degree*2; i ++) {
+        memcpy(&newLeafNode->fingerprints[i], &this->fingerprints[i], sizeof(Byte));
+        memcpy(&newLeafNode->kv[i].k, &this->kv[i].k, sizeof(uint64_t));
+        memcpy(&newLeafNode->kv[i].v, &this->kv[i].v, sizeof(uint64_t));
+    }
+//    printf("split(): check memcpy [%lu] %lu\n", newLeafNode->kv[0].k, newLeafNode->kv[0].v);
+//    printf("split(): check memcpy2 [%lu] %lu\n", this->kv[0].k, this->kv[0].v);
+
+//    printf("split() :kv set ok\n");
+    newLeafNode->prev = this;
+    this->next = newLeafNode;
+//    printf("split() :pNext set ok\n");
+    newLeafNode->n = this->degree;
+    this->n = this->degree;
+
+//    printf("split() : n set ok\n");
+    newChild->key = SplitKey;
+//    printf("split() : newChild key set ok\n");
     newChild->node = newLeafNode;
+//    printf("split() :newChild %lu %p\n", newChild->key, newChild->node);
+ /*   printf("\nleft: \n");
+    printNode();
+    printf("\nright: \n");
+    newLeafNode->printNode();*/
+
+    persist();
+
     return newChild;
 }
 
+/*
 // use to find a mediant key and delete entries less then middle
 // called by the split func to generate new leaf-node
 // qsort first then find
@@ -453,6 +569,46 @@ void quicksort(KeyValue a[], Byte finger[], Key l, Key r)
     quicksort(a, finger, l, i - 1);
     quicksort(a, finger, i + 1, r);
 }
+*/
+
+int partition(KeyValue vi[], Byte finger[], int low, int up)
+{
+    Key pivot = vi[up].k;
+    int i = low-1;
+    for (int j = low; j < up; j++)
+    {
+        if(vi[j].k <= pivot)
+        {
+            i++;
+            KeyValue kv_tmp = vi[i];
+            vi[i] = vi[j];
+            vi[j] = kv_tmp;
+            Byte fp_tmp = finger[i];
+            finger[i] = finger[j];
+            finger[j] = fp_tmp;
+        }
+    }
+    KeyValue kv_tmp = vi[i+1];
+    vi[i+1] = vi[up];
+    vi[up] = kv_tmp;
+    Byte fp_tmp = finger[i+1];
+    finger[i+1] = finger[up];
+    finger[up] = fp_tmp;
+
+    return i+1;
+}
+
+void quicksort(KeyValue a[], Byte finger[], Key l, Key r) {
+    if(l < r)
+    {
+        int mid = partition(a, finger, l, r);
+        //Watch out! The mid position is on the place, so we don't need to consider it again.
+        //That's why below is mid-1, not mid! Otherwise it will occur overflow error!!!
+        quicksort(a, finger, l, mid-1);
+        quicksort(a, finger, mid+1, r);
+    }
+}
+
 
 // use to find a mediant key and delete entries less then middle
 // called by the split func to generate new leaf-node
@@ -461,6 +617,10 @@ Key LeafNode::findSplitKey() {
     Key midKey = 0;
     // TODO
     quicksort(this->kv, this->fingerprints, 0, 2 * LEAF_DEGREE - 1);
+//    printf("findSplitKey() :quicksort ok\n");
+/*    for(int i = 0; i < this->degree*2; i ++) {
+        printf("[%d] key %lu\n", i, this->kv[i].k);
+    } */
     midKey = this->kv[LEAF_DEGREE].k;
     return midKey;
 }
@@ -503,7 +663,9 @@ bool LeafNode::update(const Key& k, const Value& v) {
 
 // if the entry can not be found, return the max Value
 Value LeafNode::find(const Key& k) {
+//    printNode();
     // TODO
+//    printf("LeafNode::find() %lu\n", k);
     for (uint64_t i = 0; i < 2*LEAF_DEGREE; i ++) {
         if (getBit(i)) {//有数据的槽
             if (this->kv[i].k == k)
@@ -627,13 +789,28 @@ bool FPTree::bulkLoading() {
     return false;
     */
     PPointer p = PAllocator::getAllocator()->getStartPointer(); // get first leaf's  PPointer of fptree
+//    printf("bulkLoading() :start %d offset %lu\n", p.fileId, p.offset);
     if(p.fileId == ILLEGAL_FILE_ID) return false;
     while(p.fileId != ILLEGAL_FILE_ID) {
-        LeafNode* leaf = new LeafNode(p, this);
-        KeyNode kn_leaf;
-        kn_leaf.key = leaf->getKey(0);
-        kn_leaf.node = leaf;
-        (*this->root).insertLeaf(kn_leaf);
+        
+        if(PAllocator::getAllocator()->ifLeafUsed(p)) {
+            LeafNode* leaf = new LeafNode(p, this);
+            Key minKey = MAX_KEY;
+            for(int i = 0; i < this->degree*2; i ++) {
+                if(leaf->getBit(i)) {
+                    if(leaf->kv[i].k < minKey) minKey = leaf->kv[i].k;
+                }
+            }
+ //           printf("bulkLoading() :minKey %lu\n", minKey);
+            KeyNode kn_leaf;
+            kn_leaf.key = minKey;
+            kn_leaf.node = leaf;
+            (*this->root).insertLeaf(kn_leaf);
+ //           printf("bulkLoading() in:next %d offset %lu\n", p.fileId, p.offset);
+        }
+        p = getPNext(p);
+ //       printf("bulkLoading() :next %d offset %lu\n", p.fileId, p.offset);
     }
+ //   printf("bulkLoading() :finish\n");
     return true;
 }
