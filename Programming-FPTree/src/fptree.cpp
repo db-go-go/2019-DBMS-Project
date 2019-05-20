@@ -82,9 +82,18 @@ void InnerNode::insertNonFull(const Key& k, Node* const& node) {
                 this->childrens[index+1] = n_t;
                 this->nChild ++;
 
+                if((*this->getChild(0)).ifLeaf()) {
+                    (*this->getChild(0)).prev = (*this->getChild(1)).prev;
+                    (*this->getChild(0)).next = this->getChild(1);
+                    (*this->getChild(1)).prev = this->getChild(0);
+                }
                 return ;
             }
         }
+
+        node->prev = (*this->getChild(index)).prev;
+        node->next = this->getChild(index);
+        (*this->getChild(index)).prev = node;
 
         for(int i = this->nKeys-1; i >= index; i --) {
             this->keys[i+1] = this->keys[i];
@@ -96,6 +105,7 @@ void InnerNode::insertNonFull(const Key& k, Node* const& node) {
         }
         this->childrens[index+1] = node;
         this->nChild ++;
+
     }
 //    printf("insertNonFull) :nKeys %d nChild %d\n", this->nKeys, this->nChild);
 }
@@ -160,13 +170,16 @@ KeyNode* InnerNode::insertLeaf(const KeyNode& leaf) {
                 }
             }
             this->nKeys ++;
-            if(minKey < leaf.key)
+            if(minKey < leaf.key) {
                 this->keys[0] = leaf.key;
+            }
             else {
                 this->childrens[1] = this->childrens[0];
                 this->childrens[0] = leaf.node;
                 this->keys[0] = minKey;
             }
+            (*this->getChild(0)).next = this->getChild(1);
+            (*this->getChild(1)).prev = this->getChild(0);
         }
         return newChild;
     }
@@ -236,52 +249,169 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
     bool ifRemove = false;
     // only have one leaf
     // TODO
-    
+    if(this->getChildNum == 1 && (*this->getChild(0)).ifLeaf) {
+        ifRemove = (*this->getChild(0)).remove(k, 0, this, ifDelete);
+        if(ifDelete) delete this->getChild(0);
+    }
     // recursive remove
     // TODO
+    else {
+        int idx = this->findIndex(k);
+        ifRemove = (*this->getChild(idx)).remove(k, idx, this, ifDelete);
+        if(ifDelete) {
+            delete this->getChild(idx);
+            this->removeChild(idx-1, idx);
+            if(!this->isRoot && this->nKeys < this->degree) {
+                InnerNode* leftBro, rightBro;
+                this->getBrother(index, parent, leftBro, rightBro);
+
+                bool managed = false;
+                if(rightBro != NULL) {
+                    if(rightBro->nKeys-1 >= this->degree) {
+                        this->redistributeRight(index, rightBro, parent);
+                        ifDelete = false;
+                        managed = true;
+                    }
+                    else {
+                        if(leftBro == NULL || leftBro->nKeys-1 < this->degree) {
+                            if(parent->isRoot && parent->getChildNum == 2) {
+                                this->mergeParentRight(parent, rightBro);
+                                ifDelete = false;
+                            }
+                            else {
+                                this->mergeRight(rightBro, parent->getKey(index));
+                                ifDelete = true;
+                                managed = true;
+                            }
+                        }
+                    }
+                }
+                if(!managed) {
+                    if(leftBro->nKeys-1 >= this->degree) {
+                        this->redistributeLeft(index, leftBro, parent);
+                        ifDelete = false;
+                    }
+                    else {
+                        if(parent->isRoot && parent->getChildNum == 2) {
+                            this->mergeParentLeft(parent, leftBro);
+                            ifDelete = false;
+                        }
+                        else {
+                            this->mergeLeft(leftBro, parent->getKey(index-1));
+                            ifDelete = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
     return ifRemove;
 }
 
 // If the leftBro and rightBro exist, the rightBro is prior to be used
 void InnerNode::getBrother(const int& index, InnerNode* const& parent, InnerNode* &leftBro, InnerNode* &rightBro) {
     // TODO
+    if(index == 0) {
+        leftBro = NULL;
+    }
+    else {
+        leftBro = parent->getChild(index-1);
+    }
+    if(index == parent->nChild-1) {
+        rightBro = NULL;
+    }
+    else {
+        rightBro = parent->getChild(index+1);
+    }
 }
 
 // merge this node, its parent and left brother(parent is root)
 void InnerNode::mergeParentLeft(InnerNode* const& parent, InnerNode* const& leftBro) {
     // TODO
+    Key k = parent->keys[0];
+    // ATTENTION!
+    this->mergeLeft(leftBro, k);
+    memcpy(parent, this, sizeof(InnerNode));
+    parent->isRoot = true;
 }
 
 // merge this node, its parent and right brother(parent is root)
 void InnerNode::mergeParentRight(InnerNode* const& parent, InnerNode* const& rightBro) {
     // TODO
+    Key k = parent->key[0];
+    // ATTENTION!
+    this->mergeRight(rightBro, k);
+    memcpy(parent, this, sizeof(InnerNode));
+    parent->isRoot = true;
 }
 
 // this node and its left brother redistribute
 // the left has more entries
 void InnerNode::redistributeLeft(const int& index, InnerNode* const& leftBro, InnerNode* const& parent) {
     // TODO
+    this->insertNonFull(leftBro->getKey(leftBro->getKeyNum()-1), leftBro->getChild(leftBro->getChildNum()-1));
+    leftBro->nKeys --;
+    leftBro->nChild --;
+    parent->keys[index-1] = leftBro->keys[leftBro->getKeyNum()];
 }
 
 // this node and its right brother redistribute
 // the right has more entries
 void InnerNode::redistributeRight(const int& index, InnerNode* const& rightBro, InnerNode* const& parent) {
     // TODO
+    this->insertNonFull(parent->getKey(index), rightBro->getChild(0));
+    parent->keys[index] = rightBro->keys[0];
+    rightBro->removeChild(0, 0);
 }
 
 // merge all entries to its left bro, delete this node after merging.
 void InnerNode::mergeLeft(InnerNode* const& leftBro, const Key& k) {
     // TODO
+    int nKeys_t = leftBro->nKeys;
+    leftBro->keys[nKeys_t] = k;
+    
+    for(int i = 0; i < this->nKeys; i ++) {
+        leftBro->keys[nKeys_t+1+i] = this->keys[i];
+        leftBro->childrens[nKeys_t+1+i] = this->childrens[i];
+    }
+    leftBro->nKeys += (1+this->nKeys);
+    leftBro->nChild += this->nChild;
+    leftBro->childrens[leftBro->nChild-1] = this->childrens[this->nChild-1];
+
+    delete this;
 }
 
 // merge all entries to its right bro, delete this node after merging.
 void InnerNode::mergeRight(InnerNode* const& rightBro, const Key& k) {
     // TODO
+    
+    for(int i = 0; i < rightBro->nKeys; i ++) {
+        rightBro->keys[rightBro->nKeys-i+this->nKeys] = rightBro->keys[rightBro->nKeys-1-i];
+    }
+    memcpy(rightBro->keys, this->keys, this->nKeys*sizeof(Key));
+    rightBro->keys[rightBro->nKeys] = k;
+    for(int i = 0; i < rightBro->nChild; i ++) {
+        rightBro->childrens[rightBro->nChild-i+this->nChild-1] = rightBro->childrens[rightBro->nChild-1-i];
+    }
+    memcpy(rightBro->childrens, this->childrens, this->nChild*sizeof(InnerNode*));
+    
+    rightBro->nKeys += (this->nKeys+1);
+    rightBro->nChild += this->nChild;
+
+    delete this;
 }
 
 // remove a children from the current node, used by remove func
 void InnerNode::removeChild(const int& keyIdx, const int& childIdx) {
     // TODO
+    this->nKeys --;
+    this->nChild --;
+    for(int i = keyIdx; i < this->nKeys; i ++) {
+        this->keys[i] = this->keys[i+1];
+    }
+    for(int i = childIdx; i < this->nChild; i ++) {
+        this->childrens[i] = this->childrens[i+1];
+    }
 }
 
 // update the target entry, return true if the update succeed.
@@ -466,7 +596,10 @@ KeyNode* LeafNode::split() {
     }
 
     newLeafNode->prev = this;
+    newLeafNode->next = this->next;
+
     this->next = newLeafNode;
+
     newLeafNode->n = this->degree;
     this->n = this->degree;
 
@@ -587,7 +720,33 @@ PPointer LeafNode::getPPointer() {
 // need to call PAllocator to set this leaf free and reuse it
 bool LeafNode::remove(const Key& k, const int& index, InnerNode* const& parent, bool &ifDelete) {
     bool ifRemove = false;
+    ifDelete = false;
     // TODO
+    for (uint64_t i = 0; i < 2*LEAF_DEGREE; i ++) {
+        if (getBit(i)) {//有数据的槽
+            if (this->kv[i].k == k) {
+
+                Byte tmp = 0;
+                for(int j = 0; j < 8; j ++) {
+                    if(j != i%8) tmp += 1;
+                    tmp <<= 1;
+                }
+                this->bitmap[i/8] &= tmp;
+                ifRemove = true;
+
+                ifDelete = true;
+                for(int j = 0; j < this->bitmapSize; j ++) {
+                    if(this->bitmap[j] != 0) {
+                        ifDelete = false;
+                        break;
+                    }
+                }
+
+                break;
+            }
+        }
+    }
+    if(ifDelete) PAllocator::getAllocator()->freeLeaf(this->pPointer);
     return ifRemove;
 }
 
