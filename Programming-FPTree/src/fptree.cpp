@@ -19,9 +19,6 @@ InnerNode::InnerNode(const int& d, FPTree* const& t, bool _isRoot) {
 // delete the InnerNode
 InnerNode::~InnerNode() {
     // TODO
-    cout << "###InnerNode::~InnerNode() this->keys="<<this->keys<<"\n";
-    cout << "this->keys[0]="<<this->keys[0]<<"\n";
-    //delete[] this->keys;cout << "###InnerNode::~InnerNode() this->childrens="<<this->childrens<<"\n";
     delete[] this->childrens;
 }
 
@@ -29,9 +26,7 @@ InnerNode::~InnerNode() {
 int InnerNode::findIndex(const Key& k) {
     // TODO
 
-    //int low = 0, high = nKeys, middle = 0;
     int low = 0, high = nKeys-1, middle = 0;
-    //while(low < high) {
     while(low <= high) {
         middle = (low + high)/2;
         if(k == this->keys[middle]) {
@@ -43,7 +38,6 @@ int InnerNode::findIndex(const Key& k) {
             low = middle + 1;
         }
     }
-//    printf("findIndex(): key %lu finish\n", k);
     return low;
 }
 
@@ -55,8 +49,6 @@ int InnerNode::findIndex(const Key& k) {
 // WARNING: can not insert when it has no entry
 void InnerNode::insertNonFull(const Key& k, Node* const& node) {
     // TODO
-    //if (k == 729) cout << "###InnerNode::insertNonFull begin\n";
-    //if(this->nChild > 0 && this->nKeys <= 2 * this->degree + 1) {
     if(this->nChild > 0 && this->nKeys <= 2 * this->degree) {
         int index = this->findIndex(k);
         // ATTENTION!!
@@ -104,7 +96,6 @@ void InnerNode::insertNonFull(const Key& k, Node* const& node) {
         this->childrens[index+1] = node;
         this->nChild ++;
     }
-//    printf("insertNonFull) :nKeys %d nChild %d\n", this->nKeys, this->nChild);
 }
 
 // insert func
@@ -115,10 +106,8 @@ KeyNode* InnerNode::insert(const Key& k, const Value& v) {
     // 1.insertion to the first leaf(only one leaf)
     if (this->isRoot && this->nChild == 0) {
         // TODO
-        //if (k == 729) cout << "###InnerNode::insert() insertion to the first leaf on\n";
         LeafNode* ln = new LeafNode(this->tree);
         ln->insertNonFull(k, v);
-        //if (k == 729) cout <<"###InnerNode::insert() insertNonFull successfully\n";
         KeyNode leaf;
         leaf.key = k;
         leaf.node = ln;
@@ -129,13 +118,9 @@ KeyNode* InnerNode::insert(const Key& k, const Value& v) {
     // 2.recursive insertion
     // TODO
     int index = this->findIndex(k);
-    //if(k == 729) cout<<"###InnerNode::insert() recursive insertion, index="<<index<<"\n";
-    //if (k == 729) cout<<"currentNode:\t";this->printNode();cout <<"\n";
     KeyNode* kn = this->childrens[index]->insert(k, v);
     if(kn != NULL) {
-        //if (k==729) cout <<"###InnerNode::insert() is to this->insertNonFull\n";
         this->insertNonFull(kn->key, kn->node);
-        //if (k == 729) cout <<"###InnerNode::insert() insertNonFull successfully\n";
         if(this->nKeys > this->degree*2) {
             newChild = this->split();
             if(this->isRoot) {
@@ -249,12 +234,8 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
     bool ifRemove = false;
     // only have one leaf
     // TODO
-    //cout << "###MYTEST InnerNode::remove() to remove key=" <<k<<"\n";
-    //cout << "###InnerNode::remove() current node:\t";this->printNode();cout<<"\n";
     if(this->getChildNum() == 1 && (*this->getChild(0)).ifLeaf()) {
         ifRemove = (*this->getChild(0)).remove(k, 0, this, ifDelete);
-        //cout << "###MYTEST InnerNode::remove() childNum==1 case on\n";
-        //cout << "###MYTEST InnerNode::remove() ifRemove=" <<ifRemove<<"\n";
         if(ifRemove) 
             delete this->getChild(0);
     }
@@ -263,52 +244,34 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
     else {
         int idx = this->findIndex(k);
         ifRemove = (*this->getChild(idx)).remove(k, idx, this, ifDelete);
-        cout << "###MYTEST InnerNode::remove() ifRemove="<<ifRemove<<"\n";
-        cout << "###InnerNode::remove() current node:\t";this->printNode();cout<<"\n";
-        cout << "###MYTEST InnerNode::remove() idx="<<idx<<"\n";
-        cout <<"current nChild="<<this->nChild<<"\n";
-        cout << "current nKeys="<<this->nKeys<<"\n";
-        //((InnerNode*)this->getChild(idx))->printNode();
         if(ifRemove) {
-             ((InnerNode*)this->getChild(idx))->printNode();
-            if (this->getChild(idx)!=NULL)  cout <<"child not been deleted\n";
             delete this->getChild(idx);
-            cout <<"child been deleted\n";
             this->removeChild(idx-1, idx);
-            //cout << "###MYTEST InnerNode::remove() current Node:\n";
-            ///this->printNode();  cout << "\n";
-            //cout << "this->nKeys="<<this->nKeys<<"\n";
-            //cout << "this->key[0]="<<this->keys[0]<<"\n";
+            ifRemove = false;
             if(!this->isRoot && this->nKeys < this->degree) {
                 InnerNode* leftBro, *rightBro;
                 this->getBrother(index, parent, leftBro, rightBro);
 
                 bool managed = false;
                 if(rightBro != NULL) {
-                    //cout << "###MYTEST InnerNode::remove()\n";
-                    //cout << "to remove key=" <<k<<"\n";
-                    //cout << "rightBro:\t";  rightBro->printNode();cout<<"\n";
-                    //cout << "leftBro:\t";   if(leftBro!=NULL) leftBro->printNode();else cout<<"NULL\n";
-                    //cout << "parent:\t";    parent->printNode();
-                    //cout <<  "###MYTEST InnerNode::reomve() rightBro->nKeys="<<rightBro->nKeys<<"\n";
                     if(rightBro->nKeys-1 >= this->degree) {
-                        //cout << "###MYTEST InnerNode::remove() redistributeRight\n";
-                        //cout <<"index passed to redistributeRight()="<<index<<"\n";
                         this->redistributeRight(index, rightBro, parent);
                         ifDelete = false;
+                        ifRemove = false;
                         managed = true;
                     }
                     else {
                         if(leftBro == NULL || leftBro->nKeys-1 < this->degree) {
                             if(parent->isRoot && parent->getChildNum() == 2) {
-                                cout << "###MYTEST mergeParentRight\n";
                                 this->mergeParentRight(parent, rightBro);
                                 ifDelete = false;
+                                ifRemove = false;
+                                managed = true;
                             }
                             else {
-                                cout << "###MYTEST mergeRight\n";
                                 this->mergeRight(rightBro, parent->getKey(index));
                                 ifDelete = true;
+                                ifRemove = true;
                                 managed = true;
                             }
                         }
@@ -316,33 +279,27 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
                 }
                 if(!managed) {
                     if(leftBro->nKeys-1 >= this->degree) {
-                        cout << "###MYTEST redistributeLeft\n";
                         this->redistributeLeft(index, leftBro, parent);
                         ifDelete = false;
+                        ifRemove = false;
                     }
                     else {
                         if(parent->isRoot && parent->getChildNum() == 2) {
-                            cout <<"###MYTEST mergeParentLeft\n";
                             this->mergeParentLeft(parent, leftBro);
                             ifDelete = false;
+                            ifRemove = false;
                         }
                         else {
-                            cout << "###MYTEST mergeLeft\n";
-                            cout << "###InnerNode::remove() index="<<index<<"\n";
                             this->mergeLeft(leftBro, parent->getKey(index-1));
-                            cout <<"###InnerNode::remove() after mergeLeft\n";
-                            cout << "leftBro:\t";leftBro->printNode();cout<<"\n";
-                            cout << "parent:\t";parent->printNode();cout<<"\n";
-                            cout << "current:\t";this->printNode();cout<<"\n";
                             ifDelete = true;
+                            ifRemove = true;
                         }
                     }
                 }
             }
         }
     }
-    //return ifRemove;
-    return ifDelete;
+    return ifRemove;
 }
 
 // If the leftBro and rightBro exist, the rightBro is prior to be used
@@ -378,7 +335,7 @@ void InnerNode::mergeParentRight(InnerNode* const& parent, InnerNode* const& rig
     Key k = parent->keys[0];
     // ATTENTION!
     this->mergeRight(rightBro, k);
-    memcpy(parent, this, sizeof(InnerNode));
+    memcpy(parent, rightBro, sizeof(InnerNode));
     parent->isRoot = true;
 }
 
@@ -386,17 +343,9 @@ void InnerNode::mergeParentRight(InnerNode* const& parent, InnerNode* const& rig
 // the left has more entries
 void InnerNode::redistributeLeft(const int& index, InnerNode* const& leftBro, InnerNode* const& parent) {
     // TODO
-    //this->insertNonFull(leftBro->getKey(leftBro->getKeyNum()-1), leftBro->getChild(leftBro->getChildNum()-1));
     this->insertNonFull(parent->getKey(index), leftBro->getChild(leftBro->getChildNum()-1));
-    //leftBro->nKeys --;
-    //leftBro->nChild --;
-    //parent->keys[index-1] = leftBro->keys[leftBro->getKeyNum()];
     parent->keys[index] = leftBro->keys[leftBro->getKeyNum()-1];
     leftBro->removeChild(leftBro->getKeyNum()-1,leftBro->getChildNum()-1);
-    //cout << "###MYTEST InnerNode::redistributeLeft() after redistributeLeft:\n";
-    //cout << "leftBro:\t";   leftBro->printNode();   cout << "\n";
-    //cout << "parent:\t";    parent->printNode();    cout << "\n";
-    //cout << "current:\t";   this->printNode();  cout << "\n";
 }
 
 // this node and its right brother redistribute
@@ -404,14 +353,8 @@ void InnerNode::redistributeLeft(const int& index, InnerNode* const& leftBro, In
 void InnerNode::redistributeRight(const int& index, InnerNode* const& rightBro, InnerNode* const& parent) {
     // TODO
     this->insertNonFull(parent->getKey(index), rightBro->getChild(0));
-    //cout << "###MYTEST InnerNode::redistributeRight()\n";
-    //cout << "after insert current node:\t"; this->printNode();  cout << "\n";
     parent->keys[index] = rightBro->keys[0];
     rightBro->removeChild(0, 0);
-    //cout << "###MYTEST InnerNode::redistributeRight() after redistribute:\n";
-    //cout << "rightBro:\t"; rightBro->printNode(); cout << "\n";
-    //cout << "parent:\t";    parent->printNode();    cout << "\n";
-    //cout << "current:\t";   this->printNode();  cout << "\n";
 }
 
 // merge all entries to its left bro, delete this node after merging.
@@ -419,10 +362,6 @@ void InnerNode::mergeLeft(InnerNode* const& leftBro, const Key& k) {
     // TODO
     int nKeys_t = leftBro->nKeys;
     leftBro->keys[nKeys_t] = k;
-    cout << "###InnerNode::mergeLeft() k="<<k<<"\n";
-    cout << "###InnerNode::mergeLeft() nKeys_t="<<nKeys_t<<"\n";
-    cout << "###InnerNode::mergeLeft() this->nKeys="<<this->nKeys<<"\n";
-    cout << "###InnerNode::mergeLeft() this->nChild="<<this->nChild<<"\n";
     for(int i = 0; i < this->nKeys; i ++) {
         leftBro->keys[nKeys_t+i+1] = this->keys[i];
         leftBro->childrens[nKeys_t+1+i] = this->childrens[i];
@@ -430,19 +369,16 @@ void InnerNode::mergeLeft(InnerNode* const& leftBro, const Key& k) {
     leftBro->nKeys += (1+this->nKeys);
     leftBro->nChild += this->nChild;
     leftBro->childrens[leftBro->nChild-1] = this->childrens[this->nChild-1];
-    cout << "###InnerNode::mergeLeft() leftBro:\t";leftBro->printNode();cout<<"\n";
-    //delete this;
 }
 
 // merge all entries to its right bro, delete this node after merging.
 void InnerNode::mergeRight(InnerNode* const& rightBro, const Key& k) {
     // TODO
-    
     for(int i = 0; i < rightBro->nKeys; i ++) {
         rightBro->keys[rightBro->nKeys-i+this->nKeys] = rightBro->keys[rightBro->nKeys-1-i];
     }
     memcpy(rightBro->keys, this->keys, this->nKeys*sizeof(Key));
-    rightBro->keys[rightBro->nKeys] = k;
+    rightBro->keys[rightBro->nKeys-1] = k;
     for(int i = 0; i < rightBro->nChild; i ++) {
         rightBro->childrens[rightBro->nChild-i+this->nChild-1] = rightBro->childrens[rightBro->nChild-1-i];
     }
@@ -450,8 +386,6 @@ void InnerNode::mergeRight(InnerNode* const& rightBro, const Key& k) {
     
     rightBro->nKeys += (this->nKeys+1);
     rightBro->nChild += this->nChild;
-
-    //delete this;
 }
 
 // remove a children from the current node, used by remove func
@@ -477,7 +411,6 @@ bool InnerNode::update(const Key& k, const Value& v) {
 // find the target value with the search key, return MAX_VALUE if it fails.
 Value InnerNode::find(const Key& k) {
     // TODO
- //   printNode();
     int index = this->findIndex(k);
     Value v;
     v = (*this->getChild(index)).find(k);
@@ -573,7 +506,6 @@ LeafNode::LeafNode(PPointer p, FPTree* t) {
         }
     }
     this->filePath = DATA_DIR + to_string(p.fileId);
-//    printf("LeafNode(2) :finish\n");
 }
 
 LeafNode::~LeafNode() {
@@ -594,10 +526,8 @@ KeyNode *LeafNode::insert(const Key &k, const Value &v)
     this->insertNonFull(k, v);
     if (this->n >= 2 * this->degree)
     { //full
-        //if(k==729) cout << "###LeafNode::insert() a leaf is full\n";
         newChild = split();
     }
-    //if(k==729)cout << "###LeafNode::insert() line 580 not segmentation fault yet\n";
     return newChild;
 }
 
@@ -607,7 +537,6 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
     // TODO
 
     int slot = LeafNode::findFirstZero();
-    //if (k == 729) cout<<"###LeafNode::insertNonFull() slot="<<slot<<"\n";
     this->kv[slot].k = k;
     this->kv[slot].v = v;
     this->fingerprints[slot] = keyHash(k);
@@ -624,7 +553,6 @@ void LeafNode::insertNonFull(const Key &k, const Value &v)
     offset = this->bitmapSize*sizeof(Byte) + sizeof(PPointer) + this->degree*2*sizeof(Byte) + slot*sizeof(KeyValue);
     memcpy(&pmem_addr[offset], &this->kv[slot].k,sizeof(uint64_t));
     memcpy(&pmem_addr[offset+sizeof(uint64_t)], &kv[slot].v,sizeof(uint64_t));
-    //if(k==729) cout <<"###LeafNode::insertNonFull() line 607 not segmentation fault yet\n";
     persist();
 }
 
@@ -749,13 +677,9 @@ bool LeafNode::remove(const Key& k, const int& index, InnerNode* const& parent, 
                     if(j!=7)  tmp <<= 1;
                 }
                 this->bitmap[i/8] &= tmp;
-                //cout << "###MYTEST LeafNode::remove() getBit(" <<i<<")="<<getBit(i)<<"\n";
                 uint64_t offset = (i/8)*sizeof(Byte);
-                //cout << "###MYTEST LeafNode::remove() offset="<<offset<<"\n";
                 memcpy(&this->pmem_addr[offset], &(this->bitmap[i/8]), sizeof(Byte));
                 this->persist();
-              //  ifRemove = true;
-               // ifDelete = true;
                 for(int j = 0; j < this->bitmapSize; j ++) {
                     if(this->bitmap[j] != 0) {
                         ifDelete = false;
@@ -767,8 +691,6 @@ bool LeafNode::remove(const Key& k, const int& index, InnerNode* const& parent, 
             }
         }
     }
-    //cout << "###MYTEST LeafNode::remove() ifRemove="<<ifRemove<<"\n";
-    //cout << "###MYTEST LeafNode::remove() ifDelete="<<ifDelete<<"\n";
     if(ifDelete) PAllocator::getAllocator()->freeLeaf(this->pPointer);
     return ifRemove;
 }
@@ -776,7 +698,6 @@ bool LeafNode::remove(const Key& k, const int& index, InnerNode* const& parent, 
 // update the target entry
 // return TRUE if the update succeed
 bool LeafNode::update(const Key& k, const Value& v) {
- //   this->printNode();
     bool ifUpdate = false;
     // TODO
     for (uint64_t i = 0; i < 2*LEAF_DEGREE; i ++) {
@@ -787,7 +708,6 @@ bool LeafNode::update(const Key& k, const Value& v) {
                 memcpy(&this->pmem_addr[offset], &this->kv[i].v, sizeof(Value));
                 this->persist();
                 ifUpdate = true;
- //               this->printNode();
                 return ifUpdate;
             }
 
@@ -798,13 +718,9 @@ bool LeafNode::update(const Key& k, const Value& v) {
 
 // if the entry can not be found, return the max Value
 Value LeafNode::find(const Key& k) {
-    //cout << "###MYTEST LeafNode::find() printNode\n";
-    //this->printNode();
     // TODO
-//    printf("LeafNode::find() %lu\n", k);
     for (uint64_t i = 0; i < 2*LEAF_DEGREE; i ++) {
         if (getBit(i)) {//有数据的槽
-            //cout << "###MYTEST LeafNode::find() getBit("<<i<<")="<<getBit(i)<<"\n";
             if (this->kv[i].k == k)
                 return this->kv[i].v;
         }
@@ -817,7 +733,6 @@ int LeafNode::findFirstZero() {
     // TODO
     uint64_t idx = 0;
     for (uint64_t i = 0; i < 2*this->degree; i ++) {
-    //for (uint64_t i = 0; i < 2*this->degree-1; i ++) {
         if (!getBit(i)) {
             idx = i;
             break;
@@ -836,22 +751,16 @@ void LeafNode::persist() {
         uint64_t leafgroup_size = LEAF_GROUP_HEAD + LEAF_GROUP_AMOUNT*calLeafSize();
         pmem_persist((void*)&this->filePath, leafgroup_size);
     }
-    //uint64_t offset = this->bitmapSize*sizeof(Byte) + sizeof(PPointer) + this->degree*sizeof(Byte);
-    //printf("persist() :key[%d] value[%d]\n", pmem_addr[offset], pmem_addr[offset+sizeof(uint64_t)]);
 }
 
 // call by the ~FPTree(), delete the whole tree
 void FPTree::recursiveDelete(Node* n) {
     if (n->isLeaf) {
-        //cout << "###MYTEST FPTree::recursiveDelte() 1 segmentation not fault yet\n";
         delete n;
     } else {
         for (int i = 0; i < ((InnerNode*)n)->nChild; i++) {
             recursiveDelete(((InnerNode*)n)->childrens[i]);
-            //cout << "i = " << i << "\n";
-            //cout << "###MYTEST FPTree::recursiveDelte() 2 segmentation not fault yet\n";
         }
-        //delete n;
     }
 }
 
@@ -878,14 +787,11 @@ void FPTree::changeRoot(InnerNode* newRoot) {
 
 void FPTree::insert(Key k, Value v) {
     if (root != NULL) {
-        //if (k == 729) cout << "###FPTree::insert() insert " <<k<<"\n";
-        //if (k==729) this->printTree();
         root->insert(k, v);
     }
 }
 
 bool FPTree::remove(Key k) {
-    //cout << "###MYTEST FPTree::remove() this->degree="<<this->degree<<"\n";
     if (root != NULL) {
         bool ifDelete = false;
         InnerNode* temp = NULL;
@@ -955,7 +861,5 @@ bool FPTree::bulkLoading() {
         }
         p = getPNext(p);
     }
-    //this->printTree();
-    //printf("bulkLoading() :finish\n");
     return true;
 }
