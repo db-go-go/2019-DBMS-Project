@@ -240,8 +240,7 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
     bool ifRemove = false;
     // only have one leaf
     // TODO
-    this->printNode();
-    cout << "###MYTEST InnerNode::remove() to remove key=" <<k<<"\n";
+    //cout << "###MYTEST InnerNode::remove() to remove key=" <<k<<"\n";
     if(this->getChildNum() == 1 && (*this->getChild(0)).ifLeaf()) {
         ifRemove = (*this->getChild(0)).remove(k, 0, this, ifDelete);
         //cout << "###MYTEST InnerNode::remove() childNum==1 case on\n";
@@ -254,25 +253,34 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
     else {
         int idx = this->findIndex(k);
         //cout << "###MYTEST InnerNode::remove() idx="<<idx<<"\n";
-        ((InnerNode*)this->getChild(idx))->printNode();
+        //((InnerNode*)this->getChild(idx))->printNode();
         ifRemove = (*this->getChild(idx)).remove(k, idx, this, ifDelete);
         //cout << "###MYTEST InnerNode::remove() ifRemove="<<ifRemove<<"\n";
         if(ifRemove) {
             delete this->getChild(idx);
             this->removeChild(idx-1, idx);
+            //cout << "###MYTEST InnerNode::remove() current Node:\n";
+            ///this->printNode();  cout << "\n";
+            //cout << "this->nKeys="<<this->nKeys<<"\n";
+            //cout << "this->key[0]="<<this->keys[0]<<"\n";
             if(!this->isRoot && this->nKeys < this->degree) {
                 InnerNode* leftBro, *rightBro;
                 this->getBrother(index, parent, leftBro, rightBro);
 
                 bool managed = false;
                 if(rightBro != NULL) {
-                    cout <<  "###MYTEST InnerNode::reomve() rightBro->nKeys="<<rightBro->nKeys<<"\n";
+                    //cout << "###MYTEST InnerNode::remove()\n";
+                    //cout << "to remove key=" <<k<<"\n";
+                    //cout << "rightBro:\t";  rightBro->printNode();cout<<"\n";
+                    //cout << "leftBro:\t";   if(leftBro!=NULL) leftBro->printNode();else cout<<"NULL\n";
+                    //cout << "parent:\t";    parent->printNode();
+                    //cout <<  "###MYTEST InnerNode::reomve() rightBro->nKeys="<<rightBro->nKeys<<"\n";
                     if(rightBro->nKeys-1 >= this->degree) {
-                        cout <<"###MYTEST InnerNode::remove() index passed to redistributeRight()="<<index<<"\n";
+                        //cout << "###MYTEST InnerNode::remove() redistributeRight\n";
+                        //cout <<"index passed to redistributeRight()="<<index<<"\n";
                         this->redistributeRight(index, rightBro, parent);
                         ifDelete = false;
                         managed = true;
-                        cout << "###MYTEST  redistributeRight\n";
                     }
                     else {
                         cout << "###MYTEST mergeParentRight\n";
@@ -355,12 +363,17 @@ void InnerNode::mergeParentRight(InnerNode* const& parent, InnerNode* const& rig
 // the left has more entries
 void InnerNode::redistributeLeft(const int& index, InnerNode* const& leftBro, InnerNode* const& parent) {
     // TODO
-    this->insertNonFull(leftBro->getKey(leftBro->getKeyNum()-1), leftBro->getChild(leftBro->getChildNum()-1));
-    leftBro->nKeys --;
-    leftBro->nChild --;
-    parent->keys[index-1] = leftBro->keys[leftBro->getKeyNum()];
-    leftBro->printNode();
-    parent->printNode();
+    //this->insertNonFull(leftBro->getKey(leftBro->getKeyNum()-1), leftBro->getChild(leftBro->getChildNum()-1));
+    this->insertNonFull(parent->getKey(index), leftBro->getChild(leftBro->getChildNum()-1));
+    //leftBro->nKeys --;
+    //leftBro->nChild --;
+    //parent->keys[index-1] = leftBro->keys[leftBro->getKeyNum()];
+    parent->keys[index] = leftBro->keys[leftBro->getKeyNum()-1];
+    leftBro->removeChild(leftBro->getKeyNum()-1,leftBro->getChildNum()-1);
+    //cout << "###MYTEST InnerNode::redistributeLeft() after redistributeLeft:\n";
+    //cout << "leftBro:\t";   leftBro->printNode();   cout << "\n";
+    //cout << "parent:\t";    parent->printNode();    cout << "\n";
+    //cout << "current:\t";   this->printNode();  cout << "\n";
 }
 
 // this node and its right brother redistribute
@@ -368,12 +381,14 @@ void InnerNode::redistributeLeft(const int& index, InnerNode* const& leftBro, In
 void InnerNode::redistributeRight(const int& index, InnerNode* const& rightBro, InnerNode* const& parent) {
     // TODO
     this->insertNonFull(parent->getKey(index), rightBro->getChild(0));
-    rightBro->nKeys --;
-    rightBro->nChild --;
+    //cout << "###MYTEST InnerNode::redistributeRight()\n";
+    //cout << "after insert current node:\t"; this->printNode();  cout << "\n";
     parent->keys[index] = rightBro->keys[0];
     rightBro->removeChild(0, 0);
-    rightBro->printNode();
-    parent->printNode();
+    //cout << "###MYTEST InnerNode::redistributeRight() after redistribute:\n";
+    //cout << "rightBro:\t"; rightBro->printNode(); cout << "\n";
+    //cout << "parent:\t";    parent->printNode();    cout << "\n";
+    //cout << "current:\t";   this->printNode();  cout << "\n";
 }
 
 // merge all entries to its left bro, delete this node after merging.
@@ -912,6 +927,6 @@ bool FPTree::bulkLoading() {
         p = getPNext(p);
     }
     //this->printTree();
-    printf("bulkLoading() :finish\n");
+    //printf("bulkLoading() :finish\n");
     return true;
 }
