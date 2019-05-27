@@ -8,7 +8,7 @@
 #define VALUE_LEN 8
 using namespace std;
 
-const string workload = "/home/wing/cws/2019-DBMS-Project/Programming-FPTree/workloads/";
+const string workload = "../../workloads/";
 
 const string load = workload + "1w-rw-50-50-load.txt"; // TODO: the workload_load filename
 const string run = workload + "1w-rw-50-50-run.txt";   // TODO: the workload_run filename
@@ -23,7 +23,7 @@ int main()
 	leveldb::Options options;
 	leveldb::WriteOptions write_options;
 	// TODO: open and initial the levelDB
-	// cout<<"PASS"<<endl;
+	// cout<<"PASS open and initial the levelDB"<<endl;
 	leveldb::DB **dbptr = nullptr;
 	options.create_if_missing = true;
 	leveldb::Status status = leveldb::DB::Open(options, "db1", &db);
@@ -42,10 +42,14 @@ int main()
 
 	// cout<<"PASS"<<endl;
 	FILE *FLOAD;
-	FLOAD = fopen(load.c_str(), "r");
+	FLOAD = fopen(const_cast<char*>(load.c_str()), "r");
 	FILE *FRUN;
-	FRUN = fopen(run.c_str(), "r");
-	// cout<<"PASS"<<endl;
+	FRUN = fopen(const_cast<char*>(run.c_str()), "r");
+    if(FLOAD == NULL || FRUN == NULL)   {
+        cout << "Open file failed\n";
+        return 1;
+    }
+	// cout<<"PASS open file successfully"<<endl;
 
 	clock_gettime(CLOCK_MONOTONIC, &start);
 
