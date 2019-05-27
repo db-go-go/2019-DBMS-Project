@@ -19,6 +19,7 @@ InnerNode::InnerNode(const int& d, FPTree* const& t, bool _isRoot) {
 // delete the InnerNode
 InnerNode::~InnerNode() {
     // TODO
+    delete[] this->keys;
     delete[] this->childrens;
 }
 
@@ -136,6 +137,7 @@ KeyNode* InnerNode::insert(const Key& k, const Value& v) {
             }
         }
     }
+
     return newChild;
 }
 
@@ -236,7 +238,7 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
     // TODO
     if(this->getChildNum() == 1 && (*this->getChild(0)).ifLeaf()) {
         ifRemove = (*this->getChild(0)).remove(k, 0, this, ifDelete);
-        if(ifRemove) 
+        if(ifDelete) 
             delete this->getChild(0);
     }
     // recursive remove
@@ -244,10 +246,10 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
     else {
         int idx = this->findIndex(k);
         ifRemove = (*this->getChild(idx)).remove(k, idx, this, ifDelete);
-        if(ifRemove) {
+        if(ifDelete) {
             delete this->getChild(idx);
-            this->removeChild(idx-1, idx);
-            ifRemove = false;
+            if(idx > 0) this->removeChild(idx-1, idx);
+            else this->removeChild(0, 0);
             if(!this->isRoot && this->nKeys < this->degree) {
                 InnerNode* leftBro, *rightBro;
                 this->getBrother(index, parent, leftBro, rightBro);
@@ -257,7 +259,6 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
                     if(rightBro->nKeys-1 >= this->degree) {
                         this->redistributeRight(index, rightBro, parent);
                         ifDelete = false;
-                        ifRemove = false;
                         managed = true;
                     }
                     else {
@@ -265,13 +266,11 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
                             if(parent->isRoot && parent->getChildNum() == 2) {
                                 this->mergeParentRight(parent, rightBro);
                                 ifDelete = false;
-                                ifRemove = false;
                                 managed = true;
                             }
                             else {
                                 this->mergeRight(rightBro, parent->getKey(index));
                                 ifDelete = true;
-                                ifRemove = true;
                                 managed = true;
                             }
                         }
@@ -281,18 +280,16 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
                     if(leftBro->nKeys-1 >= this->degree) {
                         this->redistributeLeft(index, leftBro, parent);
                         ifDelete = false;
-                        ifRemove = false;
                     }
                     else {
                         if(parent->isRoot && parent->getChildNum() == 2) {
                             this->mergeParentLeft(parent, leftBro);
+                            
                             ifDelete = false;
-                            ifRemove = false;
                         }
                         else {
                             this->mergeLeft(leftBro, parent->getKey(index-1));
                             ifDelete = true;
-                            ifRemove = true;
                         }
                     }
                 }
@@ -325,8 +322,16 @@ void InnerNode::mergeParentLeft(InnerNode* const& parent, InnerNode* const& left
     Key k = parent->keys[0];
     // ATTENTION!
     this->mergeLeft(leftBro, k);
-    memcpy(parent, this, sizeof(InnerNode));
-    parent->isRoot = true;
+    parent->nKeys = leftBro->nKeys;
+    parent->nChild = leftBro->nChild;
+    for(int i = 0; i < leftBro->nKeys; i ++) {
+        parent->keys[i] = leftBro->keys[i];
+    }
+    for(int i = 0; i < leftBro->nChild; i ++) {
+        parent->childrens[i] = leftBro->childrens[i];
+    }
+    delete leftBro;
+    delete this;
 }
 
 // merge this node, its parent and right brother(parent is root)
@@ -334,9 +339,16 @@ void InnerNode::mergeParentRight(InnerNode* const& parent, InnerNode* const& rig
     // TODO
     Key k = parent->keys[0];
     // ATTENTION!
-    this->mergeRight(rightBro, k);
-    memcpy(parent, rightBro, sizeof(InnerNode));
-    parent->isRoot = true;
+    parent->nKeys = rightBro->nKeys;
+    parent->nChild = rightBro->nChild;
+    for(int i = 0; i < rightBro->nKeys; i ++) {
+        parent->keys[i] = rightBro->keys[i];
+    }
+    for(int i = 0; i < rightBro->nChild; i ++) {
+        parent->childrens[i] = rightBro->childrens[i];
+    }
+    delete rightBro;
+    delete this;
 }
 
 // this node and its left brother redistribute
@@ -664,13 +676,14 @@ PPointer LeafNode::getPPointer() {
 // if it has no entry after removement return TRUE to indicate outer func to delete this leaf.
 // need to call PAllocator to set this leaf free and reuse it
 bool LeafNode::remove(const Key& k, const int& index, InnerNode* const& parent, bool &ifDelete) {
-    bool ifRemove = true;
-    //ifDelete = false;
-    ifDelete = true;
+    bool ifRemove = false;
+    ifDelete = false;
+    //ifDelete = true;
     // TODO
     for (uint64_t i = 0; i < 2*LEAF_DEGREE; i ++) {
         if (getBit(i)) {//有数据的槽
             if (this->kv[i].k == k) {
+                ifRemove = true;
                 Byte tmp = 0;
                 for(int j = 0; j < 8; j ++) {
                     if(j != i%8) tmp += 1;
@@ -680,10 +693,10 @@ bool LeafNode::remove(const Key& k, const int& index, InnerNode* const& parent, 
                 uint64_t offset = (i/8)*sizeof(Byte);
                 memcpy(&this->pmem_addr[offset], &(this->bitmap[i/8]), sizeof(Byte));
                 this->persist();
+                ifDelete = true;
                 for(int j = 0; j < this->bitmapSize; j ++) {
                     if(this->bitmap[j] != 0) {
                         ifDelete = false;
-                        ifRemove = false;
                         break;
                     }
                 }
@@ -755,13 +768,12 @@ void LeafNode::persist() {
 
 // call by the ~FPTree(), delete the whole tree
 void FPTree::recursiveDelete(Node* n) {
-    if (n->isLeaf) {
-        delete n;
-    } else {
+    if (!n->isLeaf) {
         for (int i = 0; i < ((InnerNode*)n)->nChild; i++) {
             recursiveDelete(((InnerNode*)n)->childrens[i]);
         }
     }
+    delete n;
 }
 
 FPTree::FPTree(uint64_t t_degree) {
