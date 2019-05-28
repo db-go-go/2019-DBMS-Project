@@ -85,17 +85,17 @@ YCSB大体上分两个步，第一步是读取load文件，插入一定量的数
 注意：由于lycsb.cpp中采用了相对路径对测试文件进行寻址，所以必须在bin目录下执行命令```./lycsb```才能正确打开测试文件。  
 测试结果：  
 1）10w-rw-0-100测试结果
-![10w-rw-0-100测试结果图](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-0-100.png "10w-rw-0-100测试结果图")
+![10w-rw-0-100测试结果图](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-0-100.png "10w-rw-0-100测试结果图")  
 2）10w-rw-100-0测试结果
-![10w-rw-100-0测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-100-0.png "10w-rw-100-0测试结果")
+![10w-rw-100-0测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-100-0.png "10w-rw-100-0测试结果")  
 3）10w-rw-25-75测试结果
-![10w-rw-25-75测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-25-75.png "10w-rw-25-75测试结果")
+![10w-rw-25-75测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-25-75.png "10w-rw-25-75测试结果")  
 4）10w-rw-50-50测试结果
-![10w-rw-50-50测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-50-50.png "10w-rw-50-50测试结果")
+![10w-rw-50-50测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-50-50.png "10w-rw-50-50测试结果")  
 5）10w-rw-75-25测试结果
-![10w-rw-75-25测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-75-25.png "10w-rw-75-25测试结果")
+![10w-rw-75-25测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-75-25.png "10w-rw-75-25测试结果")  
 6）1w-rw-50-50测试结果
-![1w-rw-50-50测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/1w-rw-50-50.png "1w-rw-50-50测试结果")
+![1w-rw-50-50测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/1w-rw-50-50.png "1w-rw-50-50测试结果")  
 7）220w-rw-50-50测试结果
 ![220w-rw-50-50测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/220w-rw-50-50.png "220w-rw-50-50测试结果")
 #### 3.4.3 运行FPTreeDB和LevelDB的YCSB对比测试
