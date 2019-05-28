@@ -100,3 +100,12 @@ YCSB大体上分两个步，第一步是读取load文件，插入一定量的数
 ![220w-rw-50-50测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/220w-rw-50-50.png "220w-rw-50-50测试结果")
 #### 3.4.3 运行FPTreeDB和LevelDB的YCSB对比测试
 
+### 3.5 Google Test单元测试
+在```/test```目录下，创建可执行文件夹```mkdir bin```，然后执行```make```进行编译。  
+注意要先创建文件bin后再执行make，否则编译不能成功。
+#### 3.5.1 utility_test
+编译成功后，输入命令```./bin/utility_test```，测试结果正确。  
+![通过utility_test测试](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/%E9%80%9A%E8%BF%87utility_test%E6%B5%8B%E8%AF%95.png "通过utility_test测试")
+#### 3.5.2 fptree_test
+编译成功后，输入命令```./bin/fptree_test```，测试结果正确。
+![通过fptree_test测试](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/%E9%80%9A%E8%BF%87fptree_test.png "通过fptree_test测试")
