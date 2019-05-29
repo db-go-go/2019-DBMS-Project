@@ -27,29 +27,38 @@ CLHASH = clhash.o
 ALL := $(LYCSB) $(YCSB) $(MAIN) $(FPTREE) $(UTILITY) $(PALLOCATOR) $(CLHASH)
 
 #============================TODO: all below============================
+CXXFLAGS += -g -Wall -Wextra -pthread
+CFLAGS += -g
+
+$(FPTREE) : fptree.cpp $(FPTREE_HEADER_DIR)/fptree.h
+	$(CXX) $(CXXFLAGS) -c $< -I $(HEADER_DIR)
+
+$(UTILITY) :utility.cpp $(HEADER_DIR)/utility/utility.h
+	$(CXX) $(CXXFLAGS) -c $< -I $(HEADER_DIR)
+
+$(PALLOCATOR) : p_allocator.cpp $(HEADER_DIR)/utility/p_allocator.h
+	$(CXX) $(CXXFLAGS) -c $< -I $(HEADER_DIR) -o $@
+
+$(CLHASH) : clhash.c $(HEADER_DIR)/utility/clhash.h
+	gcc $(CFLAGS) -c $< -I $(HEADER_DIR)
+
+main.o : main.cpp $(FPTREE_HEADER_DIR)/fptree.h
+	$(CXX) $(CXXFLAGS) -c $< -I $(HEADER_DIR) -lpmem -lpthread 
+
+lycsb.o : lycsb.cpp
+	$(CXX) $(CXXFLAGS) -c $< -lleveldb -lpthread
+
+ycsb.o : ycsb.cpp $(FPTREE_HEADER_DIR)/fptree.h
+	$(CXX) $(CXXFLAGS) -c $< -I $(HEADER_DIR) -lpmem -lleveldb -lpthread
+
+$(MAIN) : main.o $(FPTREE) $(UTILITY) $(PALLOCATOR) $(CLHASH)
+	$(CXX) $(CXXFLAGS) $^ -o $@ -lpmem -lpthread 
+
 $(LYCSB) : lycsb.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ -lleveldb -lpthread
 
-lycsb.o : lycsb.cpp
-	$(CXX) $(CXXFLAGS) -c lycsb.cpp -g -o $@ -lleveldb -lpthread
-
-$(MAIN) : main.o $(FPTREE) $(UTILITY) $(PALLOCATOR) $(CLHASH)
-	$(CXX) $(CFLAGS) $^ -o $@ -lpmem -lpthread -lleveldb
-
-main.o : main.cpp $(FPTREE_HEADER_DIR)/fptree.h
-	$(CXX) $(CXXFLAGS) -c $< -I $(HEADER_DIR) -g -o $@ -lpthread -lleveldb
-
-$(FPTREE) : fptree.cpp $(FPTREE_HEADER_DIR)/fptree.h
-	$(CXX) $(CXXFLAGS) -c $< -I $(HEADER_DIR) -g -o $@
-
-$(UTILITY) :utility.cpp $(HEADER_DIR)/utility/utility.h
-	$(CXX) $(CXXFLAGS) -c $< -I $(HEADER_DIR) -g -o $@
-
-$(PALLOCATOR) : p_allocator.cpp $(HEADER_DIR)/utility/p_allocator.h
-	$(CXX) $(CXXFLAGS) -c $< -I $(HEADER_DIR) -g -o $@
-
-$(CLHASH) : clhash.c $(HEADER_DIR)/utility/clhash.h
-	gcc $(CFLAGS) -c clhash.c -I $(HEADER_DIR) -g -o $@
+$(YCSB) : ycsb.o $(FPTREE) $(UTILITY) $(PALLOCATOR) $(CLHASH)
+	$(CXX) $(CXXFLAGS) $^ -o $@ -lpmem -lpthread -lleveldb
 
 $(BIN):
 	mkdir -p bin
@@ -57,7 +66,7 @@ $(BIN):
 all : $(ALL)
 
 clean :
-	rm -rf *.o ./bin/* ../data/*
+	rm -rf *.o ./bin/* /mnt/pmemdir/*
 
 cleand : 
-	rm -rf ../data/*
+	rm -rf /mnt/pmemdir/*
