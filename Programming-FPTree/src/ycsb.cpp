@@ -125,6 +125,8 @@ int main()
     printf("Run phase finishes: %d/%d items are inserted/searched\n", inserted, operation_num - inserted);
     if (single_time != 0) printf("Run phase throughput: %f operations per second \n", READ_WRITE_NUM/single_time);	
     
+    removeFile();
+
     // LevelDB
     printf("===================LevelDB====================\n");
     const string filePath = "/mnt/pmemdir/"; // data storing folder(NVM)
@@ -139,7 +141,7 @@ int main()
 
     // TODO initial the levelDB
     options.create_if_missing = true;
-    leveldb::Status status = leveldb::DB::Open(options, "leveldb", &db);
+    leveldb::Status status = leveldb::DB::Open(options, filePath, &db);
 
     inserted = 0;
     printf("Load phase begins \n");
