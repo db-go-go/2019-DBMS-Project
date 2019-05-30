@@ -53,6 +53,8 @@ void InnerNode::insertNonFull(const Key& k, Node* const& node) {
     if(this->nChild > 0 && this->nKeys <= 2 * this->degree) {
         int index = this->findIndex(k);
         // ATTENTION!!
+        // when new key k smaller than keys[0], need to compare minKey of childrens[0] and k
+        // if minKey of childrens[0] >= k, node should be inserted before childrens[0]
         if(index == 0) {
             Node* n_t = this->getChild(0);
             int minKey = MAX_KEY;
@@ -124,6 +126,8 @@ KeyNode* InnerNode::insert(const Key& k, const Value& v) {
         this->insertNonFull(kn->key, kn->node);
         if(this->nKeys > this->degree*2) {
             newChild = this->split();
+            // when InnerNode needs to split is root,
+            // require to change root
             if(this->isRoot) {
                 this->isRoot = false;
                 InnerNode* newRoot = new InnerNode(this->degree, this->tree, true);
@@ -151,6 +155,8 @@ KeyNode* InnerNode::insertLeaf(const KeyNode& leaf) {
         // TODO
         this->childrens[this->nChild] = leaf.node;
         this->nChild ++;
+        // if minKey of childrens[0] > minKey of childrens[1]
+        // swap childrens[0] and childrens[1] 
         if(this->nChild == 2) {
             Key minKey = MAX_KEY;
             for(int i = 0; i < this->degree*2; i ++) {
@@ -191,6 +197,8 @@ KeyNode* InnerNode::insertLeaf(const KeyNode& leaf) {
 
         if(this->nKeys > 2*this->degree) {
             newChild = this->split();
+            // when InnerNode needs to split is root,
+            // require to change root
             if(this->isRoot) {
                 this->isRoot = false;
                 InnerNode* newRoot = new InnerNode(this->degree, this->tree, true);
@@ -233,6 +241,8 @@ KeyNode* InnerNode::split() {
 // return TRUE if the children node is deleted after removement.
 // the InnerNode need to be redistributed or merged after deleting one of its children node.
 bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent, bool &ifDelete) {
+    // ifRemove -> if successfully remove <k,v> or cannnot find k
+    // ifDelete -> if children node is deleted
     bool ifRemove = false;
     // only have one leaf
     // TODO
@@ -250,10 +260,12 @@ bool InnerNode::remove(const Key& k, const int& index, InnerNode* const& parent,
             delete this->getChild(idx);
             if(idx > 0) this->removeChild(idx-1, idx);
             else this->removeChild(0, 0);
+            // root cannot redisribute or merge as it doesnt have bro
             if(!this->isRoot && this->nKeys < this->degree) {
                 InnerNode* leftBro, *rightBro;
                 this->getBrother(index, parent, leftBro, rightBro);
-
+                // priority: 
+                // redistribute rightbro > redistribute leftbro > merge rightbro > merge leftbro
                 bool managed = false;
                 if(rightBro != NULL) {
                     if(rightBro->nKeys-1 >= this->degree) {
@@ -575,15 +587,18 @@ KeyNode* LeafNode::split() {
     
     KeyNode* newChild = new KeyNode();
     // TODO
+    // 1. allocate a new leaf
     LeafNode * newLeafNode = new LeafNode(this->tree);
+    // 2. find split key
     Key SplitKey = findSplitKey();
+    // 3. inverse bitmap
     for (int i = 0; i < bitmapSize/2; ++i)
     {
         newLeafNode->bitmap[i] = 0;
         newLeafNode->bitmap[bitmapSize/2+i] = this->bitmap[0];
         this->bitmap[bitmapSize/2+i] = 0;
     }
-
+    // 4. set fingerprints
     for(int i = 0; i < this->degree*2; i ++) {
         memcpy(&newLeafNode->fingerprints[i], &this->fingerprints[i], sizeof(Byte));
         memcpy(&newLeafNode->kv[i].k, &this->kv[i].k, sizeof(uint64_t));
@@ -599,6 +614,7 @@ KeyNode* LeafNode::split() {
     newChild->node = newLeafNode;
 
     persist();
+    newLeafNode->persist();
 
     return newChild;
 }
@@ -678,12 +694,12 @@ PPointer LeafNode::getPPointer() {
 bool LeafNode::remove(const Key& k, const int& index, InnerNode* const& parent, bool &ifDelete) {
     bool ifRemove = false;
     ifDelete = false;
-    //ifDelete = true;
     // TODO
     for (uint64_t i = 0; i < 2*LEAF_DEGREE; i ++) {
         if (getBit(i)) {//有数据的槽
             if (this->kv[i].k == k) {
                 ifRemove = true;
+                // change bitmap
                 Byte tmp = 0;
                 for(int j = 0; j < 8; j ++) {
                     if(j != i%8) tmp += 1;
