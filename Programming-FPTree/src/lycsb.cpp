@@ -15,7 +15,7 @@ const string run = workload + "1w-rw-50-50-run.txt";   // TODO: the workload_run
 
 const string filePath = "/mnt/pmemdir/";
 
-const int READ_WRITE_NUM = 10000; // TODO: how many operations
+const int READ_WRITE_NUM = 100; // TODO: how many operations
 
 int main()
 {
@@ -50,15 +50,13 @@ int main()
         inserted ++;
     }
     fclose(ycsb_load);
-	cout << "load successfully\n";
 
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	// TODO load the workload in LevelDB
+	buf = new char[100];
 	for (int i = 0; i < READ_WRITE_NUM; i ++) {
         sprintf(buf, "%ld", key[i]);
-		cout << buf << "\n";
         status = db->Put(leveldb::WriteOptions(), buf, buf);
-		cout << i << "\n";
     }
 	clock_gettime(CLOCK_MONOTONIC, &finish);
 
