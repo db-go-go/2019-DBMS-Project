@@ -12,7 +12,7 @@ const string workload = "../../workloads/"; // TODO: the workload folder filepat
 const string load = workload + "1w-rw-50-50-load.txt"; // TODO: the workload_load filename
 const string run  = workload + "1w-rw-50-50-run.txt"; // TODO: the workload_run filename
 
-const int READ_WRITE_NUM = 10000; // TODO: amount of operations
+const int READ_WRITE_NUM = 100; // TODO: amount of operations
 
 const string catalogPath = DATA_DIR + "p_allocator_catalog";
 const string freePath = DATA_DIR + "free_list";
@@ -33,7 +33,9 @@ int main()
     FPTree fptree(1028);
     uint64_t inserted = 0, queried = 0, t = 0;
     uint64_t* key = new uint64_t[2200000];
+    //uint64_t* key = new uint64_t[READ_WRITE_NUM];
     bool* ifInsert = new bool[2200000];
+    //bool* ifInsert = new bool[READ_WRITE_NUM];
 	FILE *ycsb, *ycsb_read;
 	char *buf = NULL;
 	size_t len = 0;
@@ -69,10 +71,9 @@ int main()
     // TODO load the workload in the fptree
     // cout << "begin to load\n";
     for (int i = 0; i < READ_WRITE_NUM; i ++) {
-        if (ifInsert(i))
+        if (ifInsert[i])
             fptree.insert(key[i], key[i]);
     }
-    // cout << "fptree load successfully\n";
     clock_gettime(CLOCK_MONOTONIC, &finish);
 
     // fptree.printTree();
@@ -129,11 +130,11 @@ int main()
 
     // LevelDB
     printf("===================LevelDB====================\n");
-    const string filePath = "/mnt/pmemdir/"; // data storing folder(NVM)
+    const string filePath = "/mnt/pmemdir/leveldb"; // data storing folder(NVM)
+    buf = new char[100];
 
     memset(key, 0, 2200000);
     memset(ifInsert, 0, 2200000);
-    uint64_t number = 0;
 
     leveldb::DB* db;
     leveldb::Options options;
@@ -155,7 +156,13 @@ int main()
     for (int i = 0; i < READ_WRITE_NUM; i ++) {
         fscanf(ycsb_read, "%s%ld", ope, &key[i]);
         memcpy(&key[i], &key[i], KEY_LEN);
-        inserted ++;
+        if (strcmp(ope, "INSERT") == 0) {
+            ifInsert[i] = true;
+            inserted ++;
+        }
+        else {
+            ifInsert[i] = false;
+        }
     }
     fclose(ycsb_read);
 
