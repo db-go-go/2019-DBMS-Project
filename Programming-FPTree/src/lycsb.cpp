@@ -13,7 +13,7 @@ const string workload = "../../workloads/";
 const string load = workload + "1w-rw-50-50-load.txt"; // TODO: the workload_load filename
 const string run = workload + "1w-rw-50-50-run.txt";   // TODO: the workload_run filename
 
-const string filePath = "/mnt/pmemdir/";
+const string filePath = "./leveldb";
 
 const int READ_WRITE_NUM = 100; // TODO: how many operations
 
