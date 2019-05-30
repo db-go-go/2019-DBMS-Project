@@ -218,9 +218,7 @@ int main()
         }
         else {
             status = db->Get(leveldb::ReadOptions(), buf, &t_value);
-            //queried ++;
         }
-        operation_num ++;
     }
 	clock_gettime(CLOCK_MONOTONIC, &finish);
 
