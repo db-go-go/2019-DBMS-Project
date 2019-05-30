@@ -77,12 +77,12 @@ YCSB大体上分两个步，第一步是读取load文件，插入一定量的数
   sudo cp -r include/leveldb/ /usr/local/include/
 
 #### 3.4.2 运行LevelDB的YCSB测试
-在```/src```目录下，先通过命令```mkdir bin```创建一个可执行文件夹后，再执行```make```命令  
+在```/src```目录下，先通过命令```mkdir bin```创建一个可执行文件夹后，再执行```make all```命令  
 编译成功后，
 > cd bin
   ./lycsb
 
-注意：由于lycsb.cpp中采用了相对路径对测试文件进行寻址，所以必须在bin目录下执行命令```./lycsb```才能正确打开测试文件。  
+注意：由于lycsb.cpp中采用了相对路径对测试文件进行寻址，所以必须在bin目录下执行命令```./lycsb```才能正确打开测试文件。另外此测试并没有使用NVM。  
 测试结果：  
 1）10w-rw-0-100测试结果
 ![10w-rw-0-100测试结果图](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/10w-rw-0-100.png "10w-rw-0-100测试结果图")  
@@ -99,13 +99,23 @@ YCSB大体上分两个步，第一步是读取load文件，插入一定量的数
 7）220w-rw-50-50测试结果
 ![220w-rw-50-50测试结果](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/220w-rw-50-50.png "220w-rw-50-50测试结果")
 #### 3.4.3 运行FPTreeDB和LevelDB的YCSB对比测试
+在```/src```目录下，如果```bin```目录不存在，需要先通过命令```mkdir bin```创建一个可执行文件夹后。如果源文件还未编译，则再执行```make all```命令  
+编译成功后，
+> cd bin
+  sudo ./ycsb
 
+注意：由于ycsb.cpp中采用了相对路径对测试文件进行寻址，所以必须在bin目录下执行命令```sudo ./ycsb```才能正确打开测试文件。另外此测试由于使用的NVM挂载在根目录下，所以运行```ycsb```文件时需要在根模式下。除此之外，由于自行分配的NVM的空间可能较小，这时需要相应的修改```ycsb.cpp```代码中的```READ_WRITE_NUM```变量，否则```READ_WRITE_NUM```相对于NVM空间过大时，会出现段错误。  
+测试结果（这里由于NVM内存有限，以下的测试结果为```READ_WRITE_NUM=100```情况下）：  
+![YCSB对比测试结果图](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/YCSB%E5%AF%B9%E6%AF%94%E6%B5%8B%E8%AF%95.png "YCSB对比测试结果图")
+#### 3.4.4 清除数据文件说明
+1）如果在运行```ycsb```测试时发生了段错误，需要清除NVM中的数据文件后再重新运行，可以在```/src```目录下，执行命令```sudo make cleand```。若运行成功需要再次测试则无需执行命令删除文件，因为这在```ycsb.cpp```源代码中已做处理。  
+2）如果运行```lycsb```测试成功后需要再次运行该测试，需要先清除数据目录```leveldb```，可以在```/src```目录下，执行命令```sudo make cleand```，也可以直接在```bin```目录下执行```rm -r -f leveldb```命令。  
 ### 3.5 Google Test单元测试
 在```/test```目录下，创建可执行文件夹```mkdir bin```，然后执行```make```进行编译。  
 注意要先创建文件bin后再执行make，否则编译不能成功。
 #### 3.5.1 utility_test
-编译成功后，输入命令```./bin/utility_test```，测试结果正确。  
+编译成功后，进入根模式，输入命令```./bin/utility_test```，测试结果正确。  
 ![通过utility_test测试](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/%E9%80%9A%E8%BF%87utility_test%E6%B5%8B%E8%AF%95.png "通过utility_test测试")
 #### 3.5.2 fptree_test
-编译成功后，输入命令```./bin/fptree_test```，测试结果正确。
-![通过fptree_test测试](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/%E9%80%9A%E8%BF%87fptree_test.png "通过fptree_test测试")
+编译成功后，进入根模式，输入命令```./bin/fptree_test```，测试结果正确。
+![通过fptree_test测试](https://github.com/Bedmote/DB-Go-Go-Go/raw/master/%E9%80%9A%E8%BF%87fptree_test%E6%B5%8B%E8%AF%95.png "通过fptree_test测试")
