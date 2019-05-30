@@ -69,4 +69,4 @@ clean :
 	rm -rf *.o ./bin/* /mnt/pmemdir/*
 
 cleand : 
-	rm -rf /mnt/pmemdir/*
+	rm -rf /mnt/pmemdir/* ./bin/leveldb
