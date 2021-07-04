@@ -56,7 +56,7 @@ BIN = bin
 
 USER_HEADERS = ../include/*.h
 
-all : $(GTEST_LIBS) $(TESTS)
+all : $(GTEST_LIBS) $(BIN) $(TESTS)
 
 clean :
 	rm -f $(GTEST_LIBS) $(TESTS) *.o ../data/*
